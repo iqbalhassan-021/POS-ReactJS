@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 import { firestore } from '../firebase'; // Adjust the path as needed
 
 const AddProduct = () => {
@@ -10,6 +10,7 @@ const AddProduct = () => {
     purchasePrice: '',
     sellingPrice: '',
     productExpiry: '',
+    tabsPerPack: '', // New field added
   });
 
   const handleChange = (e) => {
@@ -20,9 +21,33 @@ const AddProduct = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Add a document to the "products" collection
-      await addDoc(collection(firestore, 'products'), formData);
-      alert('Product added successfully!');
+      // Check if a product with the same name already exists
+      const productsCollection = collection(firestore, 'products');
+      const q = query(productsCollection, where('productName', '==', formData.productName));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // If product exists, update all fields
+        const existingProduct = querySnapshot.docs[0];
+        const productRef = doc(firestore, 'products', existingProduct.id);
+
+        await updateDoc(productRef, {
+          productCompany: formData.productCompany,
+          productQuantity: formData.productQuantity,
+          purchasePrice: formData.purchasePrice,
+          sellingPrice: formData.sellingPrice,
+          productExpiry: formData.productExpiry,
+          tabsPerPack: formData.tabsPerPack, // Update the tabs per pack
+        });
+
+        alert('Product updated successfully!');
+      } else {
+        // If no product with the same name, add it as a new product
+        await addDoc(productsCollection, formData);
+        alert('Product added successfully!');
+      }
+
+      // Reset form data after submitting
       setFormData({
         productName: '',
         productCompany: '',
@@ -30,10 +55,11 @@ const AddProduct = () => {
         purchasePrice: '',
         sellingPrice: '',
         productExpiry: '',
-      }); // Reset form
+        tabsPerPack: '', // Reset new field
+      });
     } catch (error) {
-      console.error('Error adding document: ', error);
-      alert('Error adding product. Please try again.');
+      console.error('Error adding or updating document: ', error);
+      alert('Error adding or updating product. Please try again.');
     }
   };
 
@@ -108,6 +134,18 @@ const AddProduct = () => {
             id="productExpiry"
             name="productExpiry"
             value={formData.productExpiry}
+            onChange={handleChange}
+            required
+          />
+        </label>
+        <label>
+          Tabs per Pack: {/* New field */}
+          <input
+            type="number"
+            id="tabsPerPack"
+            name="tabsPerPack"
+            placeholder="Enter number of tabs per pack"
+            value={formData.tabsPerPack}
             onChange={handleChange}
             required
           />

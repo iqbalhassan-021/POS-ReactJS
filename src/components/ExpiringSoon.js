@@ -53,7 +53,11 @@ const ExpiringSoon = () => {
             <div className="product-card" key={index}>
               <h3>{product.productName}</h3>
               <p><strong>Expiry Date:</strong> {product.productExpiry}</p>
-              <p><strong>Remaining Days:</strong> {product.remainingDays} days</p>
+              <p
+                className={product.remainingDays < 180 ? 'expiry-warning' : ''}
+              >
+                <strong>Remaining Days:</strong> {product.remainingDays} days
+              </p>
               <p><strong>Company:</strong> {product.productCompany}</p>
             </div>
           ))

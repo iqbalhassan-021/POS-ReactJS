@@ -43,7 +43,10 @@ const ProductList = () => {
             <div className="product-card" key={product.id}>
               <h3>{product.productName}</h3>
               <p>
-                <strong>Remaining:</strong> {product.productQuantity}
+                <strong>Remaining Packs:</strong> {product.productQuantity}
+              </p>
+              <p>
+                <strong>Remaining Tabs:</strong> {product.productQuantity * product.tabsPerPack}
               </p>
             </div>
           ))

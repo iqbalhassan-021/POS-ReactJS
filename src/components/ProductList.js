@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '../firebase'; // Adjust the path to your firebase.js file
 
 const ProductList = () => {
@@ -25,6 +25,20 @@ const ProductList = () => {
     fetchProducts();
   }, []);
 
+  const handleDelete = async (productId) => {
+    const confirmDelete = window.confirm('Are you sure you want to delete this product?');
+    if (confirmDelete) {
+      try {
+        await deleteDoc(doc(firestore, 'products', productId));
+        setProducts(prevProducts => prevProducts.filter(product => product.id !== productId));
+        alert('Product deleted successfully.');
+      } catch (error) {
+        console.error('Error deleting product:', error.message);
+        alert('Failed to delete the product.');
+      }
+    }
+  };
+
   if (loading) {
     return <p>Loading products...</p>;
   }
@@ -44,6 +58,10 @@ const ProductList = () => {
             <p><strong>Expiry Date:</strong> {product.productExpiry}</p>
             <p><strong>Company:</strong> {product.productCompany}</p>
             <p><strong>Selling Price:</strong> PKR:{product.sellingPrice}</p>
+            <p><strong>Tabs Per Pack:</strong> {product.tabsPerPack}</p>
+            <button onClick={() => handleDelete(product.id)} className="delete-button primary-button" style={{backgroundColor:'red', marginTop:'20px'}}>
+              Remove
+            </button>
           </div>
         ))}
       </div>

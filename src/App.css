@@ -225,9 +225,39 @@ h2 {
   cursor: pointer;
   font-size: 16px;
 }
-
+.expiry-warning {
+  color: red;
+}
 .login-btn:disabled {
   background-color: #b3d7ff;
+}
+.suggestions {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #fff;
+  position: absolute;
+  z-index: 1000;
+  width: 50%;
+  box-sizing: border-box;
+}
+
+.suggestions li {
+  padding: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #ddd;
+  transition: background-color 0.3s ease;
+}
+
+.suggestions li:hover {
+  background-color: #f0f0f0;
+}
+
+.suggestions li:active {
+  background-color: #e0e0e0;
 }
 
 .error-message {
