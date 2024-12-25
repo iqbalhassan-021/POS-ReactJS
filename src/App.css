@@ -35,6 +35,29 @@ body {
   display: flex;
   flex-direction: column;
 }
+.autocomplete-suggestions {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.autocomplete-suggestions li {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.autocomplete-suggestions li:hover {
+  background: #f0f0f0;
+}
+.autocomplete-suggestions li:focus {
+  background: red;
+}
 
 .logo {
   font-size: 1.5rem;
@@ -266,6 +289,108 @@ h2 {
   margin-top: 10px;
 }
 
+/* Styling for the input fields */
+input[type="text"], input[type="number"], input[type="tel"], select {
+  padding: 8px;
+  margin: 5px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input[type="text"]:focus, input[type="number"]:focus, select:focus {
+  border-color: #4caf50;
+  outline: none;
+}
+
+/* Styling for the buttons */
+button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+/* Styling for the table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+/* Autocomplete suggestions */
+.autocomplete-suggestions {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.autocomplete-suggestions li {
+  padding: 5px;
+  cursor: pointer;
+}
+
+.autocomplete-suggestions li:hover {
+  background-color: #f0f0f0;
+}
+
+.primary-button {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background-color: #218838;
+}
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  width: 300px;
+  text-align: left;
+}
+
+button {
+  margin-top: 10px;
+}
 
 /* Responsive Styles */
 @media (max-width: 768px) {

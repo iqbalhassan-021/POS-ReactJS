@@ -1,36 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { firestore } from '../firebase';
-import { collection, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection, getDocs, getDoc, where } from 'firebase/firestore'; 
 
 const POS = () => {
   const [products, setProducts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [quantity, setQuantity] = useState(0);
-  const [price, setPrice] = useState(0);
-  const [sellByPack, setSellByPack] = useState(true); // Toggle between pack or tabs
-  const [subtotal, setSubtotal] = useState(0);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState([
+    { product: null, quantity: 0, sellByPack: true, subtotal: 0, inputValue: '' },
+  ]);
   const [total, setTotal] = useState(0);
-  const [billGenerated, setBillGenerated] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [selectedProductIndex, setSelectedProductIndex] = useState(null);
+  const [suggestionsVisible, setSuggestionsVisible] = useState(false);
 
-  // Fetch products from Firestore
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [givenCash, setGivenCash] = useState(0);
+  const [remainingCash, setRemainingCash] = useState(0);
+  const [remainingBalance, setRemainingBalance] = useState(0); // New state for remaining balance
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const productsCollection = collection(firestore, 'products');
         const productDocs = await getDocs(productsCollection);
-        const productData = productDocs.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .filter(
-            (product) =>
-              product.productQuantity > 0 && product.tabsPerPack > 0 // Only show products with packs or tabs
-          );
+        const productData = productDocs.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setProducts(productData);
       } catch (error) {
         console.error('Error fetching products: ', error.message);
@@ -40,211 +37,290 @@ const POS = () => {
     fetchProducts();
   }, []);
 
-  const handleSearchChange = (e) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    const filteredSuggestions = products.filter((product) =>
-      product.productName.toLowerCase().includes(term.toLowerCase())
-    );
-    setSuggestions(filteredSuggestions);
+  const calculateSubtotal = (product, quantity, sellByPack) => {
+    if (sellByPack) {
+      return product.sellingPrice * quantity;
+    } else {
+      return (product.sellingPrice / product.tabsPerPack) * quantity;
+    }
   };
 
-  const selectProduct = (product) => {
-    setSearchTerm(product.productName);
-    setSelectedProduct(product);
-    setPrice(sellByPack ? product.sellingPrice : calculateTabPrice(product));
-    setSuggestions([]);
-  };
+  const handleCartChange = (index, field, value) => {
+    const updatedCart = [...cart];
+    const item = updatedCart[index];
 
-  const calculateTabPrice = (product) => {
-    if (!product || !product.tabsPerPack || product.tabsPerPack === 0) return 0;
-    return product.sellingPrice / product.tabsPerPack;
-  };
+    if (field === 'quantity') {
+      item[field] = parseInt(value, 10) || 0;
+    } else if (field === 'sellByPack') {
+      item[field] = value === 'Pack';
+    } else if (field === 'product') {
+      item[field] = value;
+      item.inputValue = value?.productName || '';
+    }
 
-  const handleQuantityChange = (e) => {
-    const qty = parseInt(e.target.value, 10);
-    setQuantity(qty);
-    setSubtotal(qty * price);
-  };
-
-  const toggleSellBy = () => {
-    if (selectedProduct) {
-      setPrice(
-        sellByPack
-          ? calculateTabPrice(selectedProduct)
-          : selectedProduct.sellingPrice
+    if (item.product) {
+      item.subtotal = calculateSubtotal(
+        item.product,
+        item.quantity,
+        item.sellByPack
       );
     }
-    setSellByPack(!sellByPack);
+
+    setCart(updatedCart);
+    const updatedTotal = updatedCart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    setTotal(updatedTotal);
+    setSelectedProductIndex(null);
+    setSuggestionsVisible(false);
   };
 
-  const addToCart = () => {
-    if (!selectedProduct || quantity <= 0) {
-      setErrorMessage('Please select a valid product and quantity.');
-      return;
-    }
+  const handleProductInput = (index, inputValue) => {
+    const updatedCart = [...cart];
+    updatedCart[index].inputValue = inputValue;
 
-    // Check if there is enough stock based on the selling mode (pack or tabs)
-    let requiredQuantity = 0;
-    if (sellByPack) {
-      requiredQuantity = quantity;
+    const productMatch = products.find((product) =>
+      product.productName.toLowerCase().includes(inputValue.toLowerCase())
+    );
+
+    updatedCart[index].product = productMatch || null;
+    if (productMatch) {
+      updatedCart[index].subtotal = calculateSubtotal(
+        productMatch,
+        updatedCart[index].quantity,
+        updatedCart[index].sellByPack
+      );
     } else {
-      requiredQuantity = quantity * selectedProduct.tabsPerPack;
+      updatedCart[index].subtotal = 0;
     }
 
-    if (selectedProduct.productQuantity < requiredQuantity) {
-      setErrorMessage('Not enough stock available.');
-      return;
-    }
-
-    // Add product to cart if enough stock is available
-    const updatedCart = [...cart, { ...selectedProduct, quantity, subtotal }];
     setCart(updatedCart);
-    setTotal(total + subtotal);
-    setQuantity(0); // Reset quantity input after adding to cart
-    setSubtotal(0);
-    setErrorMessage(''); // Clear error message on success
+    const updatedTotal = updatedCart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    setTotal(updatedTotal);
+    setSuggestionsVisible(inputValue.length > 0);
   };
 
-  const removeFromCart = (index) => {
-    const updatedCart = cart.filter((_, idx) => idx !== index);
-    const removedItem = cart[index];
+  const removeCartItem = (index) => {
+    const updatedCart = cart.filter((_, i) => i !== index);
     setCart(updatedCart);
-    setTotal(total - removedItem.subtotal);
+    const updatedTotal = updatedCart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    setTotal(updatedTotal);
   };
 
-  const generateBill = async () => {
-    if (cart.length === 0) {
-      setErrorMessage('Please add items to the cart before generating the bill.');
-      return;
-    }
+  const addNewCartItem = () => {
+    setCart([
+      ...cart,
+      { product: null, quantity: 0, sellByPack: true, subtotal: 0, inputValue: '' },
+    ]);
+  };
 
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const hideModal = () => {
+    setIsModalVisible(false);
+  };
+  const handlePayment = async () => {
     try {
+      const remaining = givenCash - total;
+      setRemainingCash(remaining);
+      setRemainingBalance(remaining);
+  
+      if (!customerName) {
+        setErrorMessage('Customer name is required');
+        return;
+      }
+  
       const billData = {
         items: cart,
         total,
+        customerName,
+        paymentMethod,
+        amount: givenCash, // Use 'amount' instead of 'givenCash'
+        remainingBalance: remaining,
         date: new Date(),
       };
-      await addDoc(collection(firestore, 'bills'), billData);
-
-      // Update product quantities in Firestore
-      for (let item of cart) {
-        const productRef = doc(firestore, 'products', item.id);
-
-        let decrementBy = 0;
-
-        if (sellByPack) {
-          // If selling by pack, decrement by the quantity of packs sold
-          decrementBy = item.quantity;
-        } else {
-          // If selling by tabs, decrement by the quantity of tabs sold
-          decrementBy = item.quantity * item.tabsPerPack;
-        }
-
-        // Decrement product quantity based on the selected mode (packs or tabs)
-        const updatedQuantity = item.productQuantity - decrementBy;
-        await updateDoc(productRef, { productQuantity: updatedQuantity });
+  
+      // Save bill data in the selected payment method collection
+      const paymentData = {
+        amount: givenCash, // Standardize field name as 'amount'
+        customerName,
+        remainingBalance: remaining,
+        transactionDate: new Date(),
+        items: cart,
+        total,
+      };
+  
+      if (paymentMethod === 'Cash') {
+        // Save bill in 'Cash' collection
+        await addDoc(collection(firestore, 'Cash'), billData);
+      } else {
+        // Save bill in the chosen payment method collection
+        await addDoc(collection(firestore, paymentMethod), paymentData);
       }
-
-      setBillGenerated(true);
+  
+      // Save remaining balance in 'remaings' collection
+      await addDoc(collection(firestore, 'remaings'), {
+        customerName,
+        remainingBalance: remaining,
+        date: new Date(),
+      });
+  
+      // Update product quantities
+      for (let item of cart) {
+        if (item.product && item.quantity > 0) {
+          try {
+            const productRef = doc(firestore, 'products', item.product.id);
+            const productSnap = await getDoc(productRef);
+  
+            if (!productSnap.exists()) continue;
+  
+            const productData = productSnap.data();
+  
+            if (productData.productQuantity === undefined || productData.productQuantity === null) continue;
+  
+            const currentQuantity = productData.productQuantity;
+            const newQuantity = currentQuantity - item.quantity;
+  
+            if (newQuantity < 0) continue;
+  
+            await updateDoc(productRef, { productQuantity: newQuantity });
+          } catch (error) {
+            console.error(`Error updating product ID ${item.product.id}:`, error.message);
+          }
+        }
+      }
+  
+      // Reset cart and close modal
+      setCart([{ product: null, quantity: 0, sellByPack: true, subtotal: 0, inputValue: '' }]);
+      setTotal(0);
+      setErrorMessage('');
+      hideModal();
     } catch (error) {
-      console.error('Error generating bill: ', error.message);
+      console.error('Error during payment process:', error.message);
     }
   };
-
-  const clearBill = () => {
-    setCart([]);
-    setTotal(0);
-    setBillGenerated(false);
-    setErrorMessage('');
-  };
-
+    
   return (
     <section className="section">
       <h2>Point of Sale (POS)</h2>
-      <form className="form">
-        <label>
-          Search Product:
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            placeholder="Search product"
-          />
-          {suggestions.length > 0 && (
-            <ul className="suggestions">
-              {suggestions.map((product) => (
-                <li key={product.id} onClick={() => selectProduct(product)}>
-                  {product.productName}
-                </li>
-              ))}
-            </ul>
-          )}
-        </label>
-
-        {selectedProduct && (
-          <>
-            <label>
-              Selling By:
-              <button type="button" onClick={toggleSellBy}>
-                {sellByPack ? 'Pack' : 'Tabs'}
-              </button>
-            </label>
-
-            <label>
-              Price:
-              <input type="number" value={Number(price).toFixed(2)} readOnly />
-            </label>
-
-            <label>
-              Quantity:
-              <input
-                type="number"
-                value={quantity}
-                onChange={handleQuantityChange}
-                min="1"
-              />
-            </label>
-
-            <button type="button" onClick={addToCart}>
-              Add to Cart
-            </button>
-          </>
-        )}
-      </form>
-
-      <h3>Cart</h3>
-      {cart.length > 0 ? (
-        <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Medicine Name</th>
+            <th>Sell By</th>
+            <th>Quantity</th>
+            <th>Subtotal (PKR)</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
           {cart.map((item, index) => (
-            <div key={index}>
-              <h4>{item.productName}</h4>
-              <p>Quantity: {item.quantity}</p>
-              <p>Subtotal: PKR {item.subtotal.toFixed(2)}</p>
-              <button type="button" className="primary-button" style={{backgroundColor:'red'}} onClick={() => removeFromCart(index)}>
-                Remove
-              </button>
-            </div>
+            <tr key={index}>
+              <td>
+                <input
+                  type="text"
+                  placeholder="Type medicine name..."
+                  value={item.inputValue}
+                  onChange={(e) => handleProductInput(index, e.target.value)}
+                  list={`product-hints-${index}`}
+                />
+                {suggestionsVisible && item.inputValue && (
+                  <ul className="autocomplete-suggestions">
+                    {products
+                      .filter((product) =>
+                        product.productName.toLowerCase().includes(item.inputValue.toLowerCase())
+                      )
+                      .map((product) => (
+                        <li
+                          key={product.id}
+                          onClick={() => {
+                            handleCartChange(index, 'product', product);
+                            setSuggestionsVisible(false);
+                          }}
+                        >
+                          {product.productName}
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </td>
+              <td>
+                <select
+                  value={item.sellByPack ? 'Pack' : 'Tab'}
+                  onChange={(e) => handleCartChange(index, 'sellByPack', e.target.value)}
+                >
+                  <option value="Pack">Pack</option>
+                  <option value="Tab">Tab</option>
+                </select>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  value={item.quantity}
+                  min="0"
+                  onChange={(e) => handleCartChange(index, 'quantity', e.target.value)}
+                />
+              </td>
+              <td>{item.subtotal ? item.subtotal.toFixed(2) : '0.00'}</td>
+              <td>
+                <button onClick={() => removeCartItem(index)}>Remove</button>
+              </td>
+            </tr>
           ))}
-        </div>
-      ) : (
-        <p>No items in the cart.</p>
-      )}
-
+        </tbody>
+      </table>
+      <button onClick={addNewCartItem}>Add More Items</button>
       <h3>Total: PKR {total.toFixed(2)}</h3>
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+      <button className="primary-button" onClick={showModal}>
+        Generate Bill
+      </button>
 
-      {!billGenerated ? (
-        <button type="button" className="primary-button" onClick={generateBill}>
-          Generate Bill
-        </button>
-      ) : (
-        <div>
-          <h3>Bill Generated</h3>
-          <p>Total: PKR {total.toFixed(2)}</p>
-          <button type="button" className="primary-button" onClick={clearBill}>
-            Clear
-          </button>
+      {isModalVisible && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>Total Bill: PKR {total.toFixed(2)}</h3>
+            <label>
+              Customer Name:
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
+            </label>
+            <label>
+              Payment Method:
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="Cash">Cash</option>
+                <option value="JazzCash">JazzCash</option>
+                <option value="EasyPesa">EasyPesa</option>
+                <option value="BankTransfer">BankTransfer</option>
+              </select>
+            </label>
+            <label>
+              Given Cash:
+              <input
+                type="number"
+                value={givenCash}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  setGivenCash(value);
+                  setRemainingBalance(value - total); // Update remaining balance dynamically
+                }}
+              />
+            </label>
+            <input
+                type="number"
+                value={remainingBalance}
+                readOnly
+                style={{ color: remainingBalance < 0 ? 'red' : 'black' }} // Make it red if negative
+              />
+            <button onClick={handlePayment}>OK</button>
+            <button onClick={hideModal}>Cancel</button>
+          </div>
         </div>
       )}
     </section>

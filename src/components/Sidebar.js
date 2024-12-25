@@ -9,8 +9,10 @@ const Sidebar = ({ onSectionChange }) => (
       <button onClick={() => onSectionChange('productList')}>Product List</button>
       <button onClick={() => onSectionChange('searchProduct')}>Search Product</button>
       <button onClick={() => onSectionChange('expiringSoon')}>Expiries</button>
-      <button onClick={() => onSectionChange('sellings')}>Sellings</button>
+   
       <button onClick={() => onSectionChange('stock')}>Stock</button>
+      <button onClick={() => onSectionChange('cash')}>Cash</button>
+      <button onClick={() => onSectionChange('vendors')}>Vendors</button>
     </nav>
   </aside>
 );

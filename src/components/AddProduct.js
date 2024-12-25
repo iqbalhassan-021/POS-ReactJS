@@ -1,159 +1,258 @@
-import React, { useState } from 'react';
-import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { firestore } from '../firebase'; // Adjust the path as needed
 
-const AddProduct = () => {
-  const [formData, setFormData] = useState({
-    productName: '',
-    productCompany: '',
-    productQuantity: '',
-    purchasePrice: '',
-    sellingPrice: '',
-    productExpiry: '',
-    tabsPerPack: '', // New field added
+const ProductTable = () => {
+  const [vendorDetails, setVendorDetails] = useState({
+    vendorName: '',
+    companyName: '',
   });
 
-  const handleChange = (e) => {
+  const [newProducts, setNewProducts] = useState([
+    {
+      productName: '',
+      productCompany: '',
+      productQuantity: '',
+      purchasePrice: '',
+      sellingPrice: '',
+      productExpiry: '',
+      tabsPerPack: '',
+    },
+  ]);
+
+  const [vendors, setVendors] = useState([]);
+  const [filteredVendors, setFilteredVendors] = useState([]);
+
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const vendorsCollection = collection(firestore, 'vendors');
+        const vendorSnapshot = await getDocs(vendorsCollection);
+        const vendorList = vendorSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setVendors(vendorList);
+      } catch (error) {
+        console.error('Error fetching vendors:', error);
+      }
+    };
+
+    fetchVendors();
+  }, []);
+
+  const handleVendorChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setVendorDetails((prevDetails) => ({ ...prevDetails, [name]: value }));
+
+    if (name === 'vendorName') {
+      const searchTerm = value.toLowerCase();
+      const matchedVendors = vendors.filter((vendor) =>
+        vendor.name.toLowerCase().includes(searchTerm)
+      );
+      setFilteredVendors(matchedVendors);
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // Check if a product with the same name already exists
-      const productsCollection = collection(firestore, 'products');
-      const q = query(productsCollection, where('productName', '==', formData.productName));
-      const querySnapshot = await getDocs(q);
+  const handleVendorSelect = (vendor) => {
+    setVendorDetails({ vendorName: vendor.name, companyName: vendor.companyName });
+    setFilteredVendors([]); // Clear suggestions when a vendor is selected
+  };
 
-      if (!querySnapshot.empty) {
-        // If product exists, update all fields
-        const existingProduct = querySnapshot.docs[0];
-        const productRef = doc(firestore, 'products', existingProduct.id);
+  const handleInputChange = (e, index) => {
+    const { name, value } = e.target;
+    setNewProducts((prevProducts) =>
+      prevProducts.map((product, i) =>
+        i === index ? { ...product, [name]: value } : product
+      )
+    );
+  };
 
-        await updateDoc(productRef, {
-          productCompany: formData.productCompany,
-          productQuantity: formData.productQuantity,
-          purchasePrice: formData.purchasePrice,
-          sellingPrice: formData.sellingPrice,
-          productExpiry: formData.productExpiry,
-          tabsPerPack: formData.tabsPerPack, // Update the tabs per pack
-        });
-
-        alert('Product updated successfully!');
-      } else {
-        // If no product with the same name, add it as a new product
-        await addDoc(productsCollection, formData);
-        alert('Product added successfully!');
-      }
-
-      // Reset form data after submitting
-      setFormData({
+  const handleAddNewRow = () => {
+    setNewProducts((prevProducts) => [
+      ...prevProducts,
+      {
         productName: '',
         productCompany: '',
         productQuantity: '',
         purchasePrice: '',
         sellingPrice: '',
         productExpiry: '',
-        tabsPerPack: '', // Reset new field
-      });
+        tabsPerPack: '',
+      },
+    ]);
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      const productsCollection = collection(firestore, 'products');
+      for (const product of newProducts) {
+        if (
+          !product.productName ||
+          !product.productCompany ||
+          !product.productQuantity
+        ) {
+          alert('Please fill all required fields.');
+          return;
+        }
+        const newRow = {
+          ...product,
+          vendorName: vendorDetails.vendorName,
+          companyName: vendorDetails.companyName,
+        };
+        await addDoc(productsCollection, newRow);
+      }
+      alert('Products saved successfully!');
+      setNewProducts([
+        {
+          productName: '',
+          productCompany: '',
+          productQuantity: '',
+          purchasePrice: '',
+          sellingPrice: '',
+          productExpiry: '',
+          tabsPerPack: '',
+        },
+      ]);
     } catch (error) {
-      console.error('Error adding or updating document: ', error);
-      alert('Error adding or updating product. Please try again.');
+      console.error('Error saving products:', error);
+      alert('Failed to save products. Please try again.');
     }
   };
 
   return (
-    <section className="section">
-      <h2>Add Product</h2>
-      <form className="form" onSubmit={handleSubmit}>
+    <section>
+      <h2>Add New Products</h2>
+      <div style={{ marginBottom: '1em' }}>
         <label>
-          Product Name:
+          Vendor Name:
           <input
             type="text"
-            id="productName"
-            name="productName"
-            placeholder="Enter product name"
-            value={formData.productName}
-            onChange={handleChange}
-            required
+            name="vendorName"
+            value={vendorDetails.vendorName}
+            onChange={handleVendorChange}
+            placeholder="Enter vendor name"
           />
         </label>
-        <label>
-          Company:
+
+     
+        {filteredVendors.length > 0 && (
+          <ul className='suggestions'>
+            {filteredVendors.map((vendor) => (
+              <li
+                key={vendor.id}
+                onClick={() => handleVendorSelect(vendor)}
+               
+              >
+                {vendor.name} - {vendor.companyName}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <label style={{ marginLeft: '1em' }}>
+          Company Name:
           <input
             type="text"
-            id="productCompany"
-            name="productCompany"
-            placeholder="Enter company name"
-            value={formData.productCompany}
-            onChange={handleChange}
-            required
+            name="companyName"
+            value={vendorDetails.companyName}
+            onChange={handleVendorChange}
+            placeholder="Company name will auto-fill"
+            disabled
           />
         </label>
-        <label>
-          Quantity:
-          <input
-            type="number"
-            id="productQuantity"
-            name="productQuantity"
-            placeholder="Enter quantity"
-            value={formData.productQuantity}
-            onChange={handleChange}
-            required
-          />
-        </label>
-        <label>
-          Purchase Price:
-          <input
-            type="number"
-            id="purchasePrice"
-            name="purchasePrice"
-            placeholder="Enter purchase price"
-            value={formData.purchasePrice}
-            onChange={handleChange}
-            required
-          />
-        </label>
-        <label>
-          Selling Price:
-          <input
-            type="number"
-            id="sellingPrice"
-            name="sellingPrice"
-            placeholder="Enter selling price"
-            value={formData.sellingPrice}
-            onChange={handleChange}
-            required
-          />
-        </label>
-        <label>
-          Expiry Date:
-          <input
-            type="date"
-            id="productExpiry"
-            name="productExpiry"
-            value={formData.productExpiry}
-            onChange={handleChange}
-            required
-          />
-        </label>
-        <label>
-          Tabs per Pack: {/* New field */}
-          <input
-            type="number"
-            id="tabsPerPack"
-            name="tabsPerPack"
-            placeholder="Enter number of tabs per pack"
-            value={formData.tabsPerPack}
-            onChange={handleChange}
-            required
-          />
-        </label>
-        <button type="submit">Submit</button>
-      </form>
+      </div>
+
+      <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Company</th>
+            <th>Quantity</th>
+            <th>Purchase Price</th>
+            <th>Selling Price</th>
+            <th>Expiry Date</th>
+            <th>Tabs per Pack</th>
+          </tr>
+        </thead>
+        <tbody>
+          {newProducts.map((product, index) => (
+            <tr key={index}>
+              <td>
+                <input
+                  type="text"
+                  name="productName"
+                  value={product.productName}
+                  onChange={(e) => handleInputChange(e, index)}
+                  placeholder="Enter product name"
+                  required
+                />
+              </td>
+              <td>
+                <input
+                  type="text"
+                  name="productCompany"
+                  value={product.productCompany}
+                  onChange={(e) => handleInputChange(e, index)}
+                  placeholder="Enter company"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  name="productQuantity"
+                  value={product.productQuantity}
+                  onChange={(e) => handleInputChange(e, index)}
+                  placeholder="Enter quantity"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  name="purchasePrice"
+                  value={product.purchasePrice}
+                  onChange={(e) => handleInputChange(e, index)}
+                  placeholder="Enter purchase price"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  name="sellingPrice"
+                  value={product.sellingPrice}
+                  onChange={(e) => handleInputChange(e, index)}
+                  placeholder="Enter selling price"
+                />
+              </td>
+              <td>
+                <input
+                  type="date"
+                  name="productExpiry"
+                  value={product.productExpiry}
+                  onChange={(e) => handleInputChange(e, index)}
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  name="tabsPerPack"
+                  value={product.tabsPerPack}
+                  onChange={(e) => handleInputChange(e, index)}
+                  placeholder="Enter tabs per pack"
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button onClick={handleAddNewRow} style={{ marginTop: '1em' }}>
+        Add New Row
+      </button>
+      <button onClick={handleSaveAll} style={{ marginTop: '1em', marginLeft: '1em' }}>
+        Save All Products
+      </button>
     </section>
   );
 };
 
-export default AddProduct;
+export default ProductTable;

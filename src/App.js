@@ -10,6 +10,8 @@ import ExpiringSoon from './components/ExpiringSoon';
 import Sellings from './components/Sellings';
 import Stock from './components/Stock';
 import Login from './Pages/Login'; // Import the Login page
+import Cash from './components/CashComponent';
+import Vendors from './components/Vendors';
 import './App.css';
 
 const App = () => {
@@ -40,6 +42,8 @@ const App = () => {
         {activeSection === 'expiringSoon' && <ExpiringSoon />}
         {activeSection === 'sellings' && <Sellings />}
         {activeSection === 'stock' && <Stock />}
+        {activeSection === 'cash' && <Cash />}
+        {activeSection === 'vendors' && <Vendors />}
       </main>
     </div>
   );
