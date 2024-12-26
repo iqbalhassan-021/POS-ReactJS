@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
-import { firestore } from '../firebase'; // Adjust the path as needed
+import { firestore } from '../firebase';
 
 const ProductTable = () => {
   const [vendorDetails, setVendorDetails] = useState({
@@ -56,7 +56,7 @@ const ProductTable = () => {
 
   const handleVendorSelect = (vendor) => {
     setVendorDetails({ vendorName: vendor.name, companyName: vendor.companyName });
-    setFilteredVendors([]); // Clear suggestions when a vendor is selected
+    setFilteredVendors([]);
   };
 
   const handleInputChange = (e, index) => {
@@ -120,10 +120,56 @@ const ProductTable = () => {
     }
   };
 
+  const handlePrint = () => {
+    const printContent = `
+      <h2>BUTT PHARMACY</h2>
+      <p><strong>Vendor Name:</strong> ${vendorDetails.vendorName} - <strong>Company Name:</strong> ${vendorDetails.companyName} - <strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+
+      <h2>Products</h2>
+      <table border="1" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Company</th>
+            <th>Quantity</th>
+            <th>Purchase Price</th>
+            <th>Selling Price</th>
+            <th>Expiry Date</th>
+            <th>Tabs per Pack</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${newProducts
+            .map(
+              (product) => `
+              <tr>
+                <td>${product.productName}</td>
+                <td>${product.productCompany}</td>
+                <td>${product.productQuantity}</td>
+                <td>${product.purchasePrice}</td>
+                <td>${product.sellingPrice}</td>
+                <td>${product.productExpiry}</td>
+                <td>${product.tabsPerPack}</td>
+              </tr>
+            `
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Print</title></head><body>');
+    printWindow.document.write(printContent);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   return (
     <section>
       <h2>Add New Products</h2>
-      <div style={{ marginBottom: '1em' }}>
+      <div style={{ marginBottom: '1em', display: 'flex', flexDirection: 'row' }}>
         <label>
           Vendor Name:
           <input
@@ -134,22 +180,15 @@ const ProductTable = () => {
             placeholder="Enter vendor name"
           />
         </label>
-
-     
         {filteredVendors.length > 0 && (
-          <ul className='suggestions'>
+          <ul className="suggestions">
             {filteredVendors.map((vendor) => (
-              <li
-                key={vendor.id}
-                onClick={() => handleVendorSelect(vendor)}
-               
-              >
+              <li key={vendor.id} onClick={() => handleVendorSelect(vendor)}>
                 {vendor.name} - {vendor.companyName}
               </li>
             ))}
           </ul>
         )}
-
         <label style={{ marginLeft: '1em' }}>
           Company Name:
           <input
@@ -250,6 +289,9 @@ const ProductTable = () => {
       </button>
       <button onClick={handleSaveAll} style={{ marginTop: '1em', marginLeft: '1em' }}>
         Save All Products
+      </button>
+      <button onClick={handlePrint} style={{ marginBottom: '1em' ,  marginLeft: '1em' }}>
+        Print Details
       </button>
     </section>
   );

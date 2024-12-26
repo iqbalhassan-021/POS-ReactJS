@@ -10,7 +10,6 @@ const Vendors = () => {
     phoneNumber: '',
   });
 
-  // Fetch all vendors from Firestore on component mount
   useEffect(() => {
     const fetchVendors = async () => {
       try {
@@ -35,7 +34,6 @@ const Vendors = () => {
     e.preventDefault();
     const { name, companyName, phoneNumber } = vendorForm;
 
-    // Basic validation
     if (!name || !companyName || !phoneNumber) {
       alert('All fields are required');
       return;
@@ -43,10 +41,8 @@ const Vendors = () => {
 
     try {
       const vendorsCollection = collection(firestore, 'vendors');
-      // Add a new vendor to Firestore
       await addDoc(vendorsCollection, { name, companyName, phoneNumber });
 
-      // Reset the form and refetch vendors
       setVendorForm({
         name: '',
         companyName: '',
@@ -68,7 +64,6 @@ const Vendors = () => {
       const vendorRef = doc(firestore, 'vendors', vendorId);
       await deleteDoc(vendorRef);
 
-      // After deletion, refetch the updated list of vendors
       const vendorsCollection = collection(firestore, 'vendors');
       const vendorSnapshot = await getDocs(vendorsCollection);
       const vendorList = vendorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -85,55 +80,52 @@ const Vendors = () => {
     <section>
       <h2>Vendors</h2>
 
-      {/* Form to add new vendor */}
       <form onSubmit={handleSubmit} style={{ marginBottom: '2em' }}>
-        <label>
-          Name:
-          <input
-            type="text"
-            name="name"
-            value={vendorForm.name}
-            onChange={handleChange}
-            placeholder="Enter vendor name"
-            required
-          />
-        </label>
-        <br />
-        <label>
-          Company Name:
-          <input
-            type="text"
-            name="companyName"
-            value={vendorForm.companyName}
-            onChange={handleChange}
-            placeholder="Enter company name"
-            required
-          />
-        </label>
-        <br />
-        <label>
-          Phone Number:
-          <input
-            type="tel"
-            name="phoneNumber"
-            value={vendorForm.phoneNumber}
-            onChange={handleChange}
-            placeholder="Enter phone number"
-            required
-          />
-        </label>
-        <br />
-        <button type="submit">Add Vendor</button>
+        <div style={{ display: 'flex', gap: '1em', alignItems: 'center' }}>
+          <label>
+            Name:
+            <input
+              type="text"
+              name="name"
+              value={vendorForm.name}
+              onChange={handleChange}
+              placeholder="Enter vendor name"
+              required
+            />
+          </label>
+          <label>
+            Company Name:
+            <input
+              type="text"
+              name="companyName"
+              value={vendorForm.companyName}
+              onChange={handleChange}
+              placeholder="Enter company name"
+              required
+            />
+          </label>
+          <label>
+            Phone Number:
+            <input
+              type="tel"
+              name="phoneNumber"
+              value={vendorForm.phoneNumber}
+              onChange={handleChange}
+              placeholder="Enter phone number"
+              required
+            />
+          </label>
+          <button type="submit">Add Vendor</button>
+        </div>
       </form>
 
-      {/* Display all vendors */}
       <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <th>Name</th>
             <th>Company Name</th>
             <th>Phone Number</th>
-            <th>Actions</th> {/* Add a column for actions */}
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -143,7 +135,6 @@ const Vendors = () => {
               <td>{vendor.companyName}</td>
               <td>{vendor.phoneNumber}</td>
               <td>
-                {/* Add a Remove button to delete the vendor */}
                 <button onClick={() => handleRemove(vendor.id)}>Remove</button>
               </td>
             </tr>

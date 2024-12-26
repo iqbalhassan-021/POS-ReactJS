@@ -199,7 +199,45 @@ const POS = () => {
       console.error('Error during payment process:', error.message);
     }
   };
+  const handlePrint = () => {
+    const printContent = `
+      <div>
+        <h2>BUTT PHARMACY</h2>
+        <p><strong>Date:</strong> ${new Date().toLocaleDateString()} - <strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+
+        <p><strong>Customer:</strong>  ${customerName} - <strong>Payment Method: </strong> ${paymentMethod}</p>
+  
+        <h3>Items:</h3>
+        <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr>
+              <th>Medicine Name</th>
+              <th>Quantity</th>
+              <th>Subtotal (PKR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cart.map((item) => `
+              <tr>
+                <td>${item.product?.productName || ''}</td>
+                <td>${item.quantity}</td>
+                <td>${item.subtotal.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <h3>Total: PKR ${total.toFixed(2)}</h3>
+        <h3>Given Cash: PKR ${givenCash.toFixed(2)}</h3>
+        <h3>Remaining Balance: PKR ${remainingBalance.toFixed(2)}</h3>
+      </div>
+    `;
     
+    const newWindow = window.open('', '', 'width=800,height=600');
+    newWindow.document.write(printContent);
+    newWindow.document.close();
+    newWindow.print();
+  };
+  
   return (
     <section className="section">
       <h2>Point of Sale (POS)</h2>
@@ -270,6 +308,7 @@ const POS = () => {
         </tbody>
       </table>
       <button onClick={addNewCartItem}>Add More Items</button>
+      <p>______</p>
       <h3>Total: PKR {total.toFixed(2)}</h3>
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
       <button className="primary-button" onClick={showModal}>
@@ -277,52 +316,60 @@ const POS = () => {
       </button>
 
       {isModalVisible && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Total Bill: PKR {total.toFixed(2)}</h3>
-            <label>
-              Customer Name:
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-            </label>
-            <label>
-              Payment Method:
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              >
-                <option value="Cash">Cash</option>
-                <option value="JazzCash">JazzCash</option>
-                <option value="EasyPesa">EasyPesa</option>
-                <option value="BankTransfer">BankTransfer</option>
-              </select>
-            </label>
-            <label>
-              Given Cash:
-              <input
-                type="number"
-                value={givenCash}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  setGivenCash(value);
-                  setRemainingBalance(value - total); // Update remaining balance dynamically
-                }}
-              />
-            </label>
-            <input
-                type="number"
-                value={remainingBalance}
-                readOnly
-                style={{ color: remainingBalance < 0 ? 'red' : 'black' }} // Make it red if negative
-              />
-            <button onClick={handlePayment}>OK</button>
-            <button onClick={hideModal}>Cancel</button>
-          </div>
-        </div>
-      )}
+  <div className="modal">
+    <div className="modal-content">
+      <h3>BUTT PHARMACY</h3>
+      <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+      <p><strong>Time:</strong> {new Date().toLocaleTimeString()}</p>
+      <h3>Total Bill: PKR {total.toFixed(2)}</h3>
+      <label>
+        Customer Name:
+        <input
+          type="text"
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+        />
+      </label>
+      <label>
+        Payment Method:
+        <select
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
+        >
+          <option value="Cash">Cash</option>
+          <option value="JazzCash">JazzCash</option>
+          <option value="EasyPesa">EasyPesa</option>
+          <option value="BankTransfer">BankTransfer</option>
+        </select>
+      </label>
+      <label>
+        Given Cash:
+        <input
+          type="number"
+          value={givenCash}
+          onChange={(e) => {
+            const value = parseFloat(e.target.value);
+            setGivenCash(value);
+            setRemainingBalance(value - total);
+          }}
+        />
+      </label>
+      <label>
+        Remaining Cash:
+        <input
+          type="number"
+          value={remainingBalance}
+          readOnly
+          style={{ color: remainingBalance < 0 ? 'red' : 'black' }}
+        />
+      </label>
+      <button onClick={handlePayment}>OK</button>
+      <button onClick={hideModal} style={{ marginLeft: '1em' }}>Cancel</button>
+      <button onClick={handlePrint} style={{ marginLeft: '1em' }}>Print</button>
+    </div>
+  </div>
+)}
+
     </section>
   );
 };
