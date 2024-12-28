@@ -213,6 +213,7 @@ const POS = () => {
             <tr>
               <th>Medicine Name</th>
               <th>Quantity</th>
+
               <th>Subtotal (PKR)</th>
             </tr>
           </thead>

@@ -13,6 +13,7 @@ const Sidebar = ({ onSectionChange }) => (
       <button onClick={() => onSectionChange('stock')}>Stock</button>
       <button onClick={() => onSectionChange('cash')}>Cash</button>
       <button onClick={() => onSectionChange('vendors')}>Vendors</button>
+      <button onClick={() => onSectionChange('DuesSpending')}>DuesSpending</button>
     </nav>
   </aside>
 );

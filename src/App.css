@@ -282,6 +282,17 @@ h2 {
 .suggestions li:active {
   background-color: #e0e0e0;
 }
+.spendings-table select,
+.spendings-table input {
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.spendings-table button {
+  padding: 5px 10px;
+  cursor: pointer;
+}
 
 .error-message {
   color: red;

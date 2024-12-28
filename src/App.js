@@ -12,6 +12,7 @@ import Stock from './components/Stock';
 import Login from './Pages/Login'; // Import the Login page
 import Cash from './components/CashComponent';
 import Vendors from './components/Vendors';
+import DuesSpending from './components/DuesSpending';
 import './App.css';
 
 const App = () => {
@@ -44,6 +45,7 @@ const App = () => {
         {activeSection === 'stock' && <Stock />}
         {activeSection === 'cash' && <Cash />}
         {activeSection === 'vendors' && <Vendors />}
+        {activeSection === 'DuesSpending' && <DuesSpending />}
       </main>
     </div>
   );
