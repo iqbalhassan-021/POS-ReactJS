@@ -130,7 +130,15 @@ const DuesSpending = () => {
       setMessage('Failed to delete the record. Please try again.');
     }
   };
+  const handlePrint = () => {
+    const printContent = document.getElementById('print-section').innerHTML;
+    const originalContent = document.body.innerHTML;
 
+    document.body.innerHTML = printContent;
+    window.print();
+    document.body.innerHTML = originalContent;
+    window.location.reload(); // Reload to restore the original page
+  };
   return (
     <section className="dues-spending">
       <h2>Manage Dues and Spendings</h2>
@@ -186,8 +194,10 @@ const DuesSpending = () => {
         </thead>
       </table>
 
-      {/* Dues Overview */}
       <h3>Dues Overview</h3>
+      <button onClick={handlePrint} style={{ marginBottom: '10px' }}>
+        Print Data
+      </button>
       <table className="dues-table">
         <thead>
           <tr>
@@ -216,6 +226,32 @@ const DuesSpending = () => {
           )}
         </tbody>
       </table>
+
+      {/* Hidden Print Section */}
+      <div id="print-section" style={{ display: 'none' }}>
+        <h1 >BUTT PHARMACY</h1>
+        <p >
+          {new Date().toLocaleString()}
+        </p>
+        <table style={{ width: '100%', border: '1px solid black', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid black' }}>Date</th>
+              <th style={{ border: '1px solid black' }}>Category</th>
+              <th style={{ border: '1px solid black' }}>Amount (PKR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dues.map((due) => (
+              <tr key={due.id}>
+                <td style={{ border: '1px solid black' }}>{due.date}</td>
+                <td style={{ border: '1px solid black' }}>{due.category}</td>
+                <td style={{ border: '1px solid black' }}>{due.amount.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 };

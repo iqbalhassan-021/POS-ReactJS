@@ -13,11 +13,12 @@ import Login from './Pages/Login'; // Import the Login page
 import Cash from './components/CashComponent';
 import Vendors from './components/Vendors';
 import DuesSpending from './components/DuesSpending';
+import Dashboard  from './components/Dashboard';
 import './App.css';
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false); // State to track if user is logged in
-  const [activeSection, setActiveSection] = useState('productList');
+  const [activeSection, setActiveSection] = useState('Dashboard');
 
   const handleSectionChange = (section) => {
     setActiveSection(section);
@@ -36,6 +37,7 @@ const App = () => {
       <Sidebar onSectionChange={handleSectionChange} />
       <main className="content">
         <Header title="Product Dashboard" />
+        {activeSection === 'Dashboard' && <Dashboard />}
         {activeSection === 'productList' && <ProductList />}
         {activeSection === 'addProduct' && <AddProduct />}
         {activeSection === 'searchProduct' && <SearchProduct />}
