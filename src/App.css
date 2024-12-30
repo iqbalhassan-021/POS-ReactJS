@@ -421,6 +421,39 @@ h2 {
   font-size: 14px;
   margin: 0;
 }
+.expired {
+  color: red;
+  font-weight: bold;
+}
+
+.actions {
+  margin-top: 10px;
+}
+
+.delete-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.revive-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background-color: #d32f2f;
+}
+
+.revive-button:hover {
+  background-color: #388e3c;
+}
 
 .error-message {
   color: red;

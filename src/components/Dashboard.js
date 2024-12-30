@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../firebase';
 
 import {
@@ -21,84 +21,74 @@ const Dashboard = () => {
   const [dailySales, setDailySales] = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
   const [expiringProducts, setExpiringProducts] = useState([]);
+  const [expiredProducts, setExpiredProducts] = useState([]);
+  const [lowStockProducts, setLowStockProducts] = useState([]); // New state for low stock products
   const [totalSale, setTotalSale] = useState(0);
+
+  const accounts = [
+    { name: 'Cash', collectionName: 'Cash' },
+    { name: 'JazzCash', collectionName: 'JazzCash' },
+    { name: 'EasyPesa', collectionName: 'EasyPesa' },
+    { name: 'BankTransfer', collectionName: 'BankTransfer' },
+  ];
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetching products
+        // Fetch products
         const productsSnapshot = await getDocs(collection(firestore, 'products'));
-        const products = productsSnapshot.docs.map((doc) => doc.data());
-        console.log('Fetched products:', products); // Log products
+        const products = productsSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          const expiryDate = new Date(data.productExpiry);
+          const currentDate = new Date();
+          currentDate.setHours(0, 0, 0, 0);
+          expiryDate.setHours(0, 0, 0, 0);
+
+          const remainingDays = Math.floor(
+            (expiryDate - currentDate) / (1000 * 60 * 60 * 24)
+          );
+
+          return { ...data, remainingDays };
+        });
+
+        // Separate expired and expiring products
+        const expired = products.filter((product) => product.remainingDays <= 0);
+        const expiringSoon = products.filter(
+          (product) => product.remainingDays > 0 && product.remainingDays <= 180
+        );
+
+        // Identify low-stock products
+        const lowStock = products.filter((product) => product.productQuantity < 10);
+
+        setExpiredProducts(expired);
+        setExpiringProducts(expiringSoon);
+        setLowStockProducts(lowStock); // Update low stock products
         setProductCount(products.length);
 
-        // Fetching sales data for today
-        const salesSnapshot = await getDocs(
-          query(collection(firestore, 'sales'), where('date', '==', new Date().toLocaleDateString()))
-        );
-        const sales = salesSnapshot.docs.map((doc) => doc.data());
-        console.log('Sales fetched:', sales); // Log sales
-        setDailySales(sales.reduce((sum, sale) => sum + sale.amount, 0));
-        setTotalProfit(sales.reduce((sum, sale) => sum + sale.profit, 0));
+        // Fetch total balances from each bank collection
+        let totalBalance = 0;
 
-        // Fetching total sale from balances (Cash, JazzCash, EasyPesa, BankTransfer)
-        const balances = ['Cash', 'JazzCash', 'EasyPesa', 'BankTransfer'];
-        let totalSaleAmount = 0;
-
-        for (const balance of balances) {
-          const balanceSnapshot = await getDocs(collection(firestore, balance));
-          const balanceData = balanceSnapshot.docs.map((doc) => doc.data());
-          console.log(`${balance} balances fetched:`, balanceData); // Log balance data
-
-          balanceData.forEach((item) => {
-            if (typeof item.balance === 'number' && !isNaN(item.balance)) {
-              totalSaleAmount += item.balance;
-            } else {
-              console.warn(`Invalid balance data in ${balance} collection.`);
-            }
-          });
-        }
-
-        setTotalSale(totalSaleAmount);
-
-        // Weekly sales for the last 7 days
-        const last7Days = [...Array(7)].map((_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          return date.toLocaleDateString();
-        });
-        const weeklyData = last7Days.map((date) => ({
-          date,
-          sales: sales.filter((sale) => sale.date === date).reduce((sum, sale) => sum + sale.amount, 0),
-        }));
-        console.log('Weekly sales data:', weeklyData); // Log weekly sales
-        setWeeklySales(weeklyData);
-            // Fetching expiring products
-            const expiringSnapshot = await getDocs(query(collection(firestore, 'products')));
-            const expiringProductsData = expiringSnapshot.docs.map((doc) => {
+        for (const account of accounts) {
+          const accountSnapshot = await getDocs(collection(firestore, account.collectionName));
+        
+          // Log the account data for debugging
+          console.log(`Fetching balance for ${account.name} collection:`, account.collectionName);
+        
+          // Use for...of loop to properly handle async operations
+          for (const doc of accountSnapshot.docs) {
             const data = doc.data();
-            const expiryDate = new Date(data.productExpiry); // Use productExpiry field
-            const currentDate = new Date();
-            
-            // Set both dates to the start of the day (removes the time part)
-            currentDate.setHours(0, 0, 0, 0);
-            expiryDate.setHours(0, 0, 0, 0);
-
-            const remainingMillis = expiryDate - currentDate; // Difference in milliseconds
-            const remainingDays = Math.floor(remainingMillis / (1000 * 60 * 60 * 24)); // Convert to days
-
-            return { ...data, remainingDays };
-            });
-
-            // Filter out products that have expired (remainingDays < 0)
-            const validExpiringProducts = expiringProductsData.filter(product => product.remainingDays >= 0);
-
-            console.log('Valid expiring products:', validExpiringProducts); // Log valid products
-            setExpiringProducts(validExpiringProducts);
-
-
-
-
+            const amount = data.amount || 0; // Default to 0 if amount is missing
+        
+            console.log(`Amount for ${account.name}:`, amount); // Log the amount of each account document
+            totalBalance += amount;
+          }
+        }
+        
+        // Log the final total balance
+        console.log('Total Sale (Total Amount from all accounts):', totalBalance);
+        
+        setTotalSale(totalBalance); // Set total sale as the sum of all amounts
+        
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
@@ -107,7 +97,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Graph data
   const graphData = {
     labels: weeklySales.map((data) => data.date),
     datasets: [
@@ -148,23 +137,53 @@ const Dashboard = () => {
       </div>
 
       <div className="second-row">
-  <div className="expiring-products">
-    <h3>Expiring Products</h3>
-    <ul>
-      {expiringProducts.length > 0 ? (
-        expiringProducts.map((product, index) => (
-          <li key={index}>
-            {product.productName} - Expiry in{' '}
-            {product.remainingDays < 0 ? 'Expired' : `${product.remainingDays} days`}
-          </li>
-        ))
-      ) : (
-        <p>No products expiring soon.</p>
-      )}
-    </ul>
-  </div>
-</div>
+        <div className="expiring-products">
+          <h3>Products Expiring Soon (Next 6 Months)</h3>
+          <ul>
+            {expiringProducts.length > 0 ? (
+              expiringProducts.map((product, index) => (
+                <li key={index}>
+                  {product.productName} - Expiry in {product.remainingDays} days
+                </li>
+              ))
+            ) : (
+              <p>No products expiring soon.</p>
+            )}
+          </ul>
+        </div>
 
+        <div className="expired-products">
+          <div className="expiring-products">
+            <h3>Expired Products</h3>
+            <ul>
+              {expiredProducts.length > 0 ? (
+                expiredProducts.map((product, index) => (
+                  <li key={index}>{product.productName} - Expired</li>
+                ))
+              ) : (
+                <p>No expired products.</p>
+              )}
+            </ul>
+          </div>
+        </div>
+
+        <div className="low-stock-products"> {/* New Section */}
+          <div className="expiring-products">
+            <h3>Low Stock Products (Less than 10)</h3>
+            <ul>
+              {lowStockProducts.length > 0 ? (
+                lowStockProducts.map((product, index) => (
+                  <li key={index}>
+                    {product.productName} - Quantity: {product.productQuantity}
+                  </li>
+                ))
+              ) : (
+                <p>No low-stock products.</p>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

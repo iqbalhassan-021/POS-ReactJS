@@ -39,6 +39,16 @@ const ProductList = () => {
     }
   };
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('print-area').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Product List</title></head><body>');
+    printWindow.document.write(printContent);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   if (loading) {
     return <p>Loading products...</p>;
   }
@@ -50,23 +60,107 @@ const ProductList = () => {
   return (
     <section className="section">
       <h2>All Products</h2>
-      <div className="product-list">
-        {products.map(product => (
-          <div key={product.id} className="product-card">
-            <h3>{product.productName}</h3>
-            <p><strong>Price:</strong> PKR:{product.purchasePrice}</p>
-            <p><strong>Expiry Date:</strong> {product.productExpiry}</p>
-            <p><strong>Company:</strong> {product.productCompany}</p>
-            <p><strong>Selling Price:</strong> PKR:{product.sellingPrice}</p>
-            <p><strong>Tabs Per Pack:</strong> {product.tabsPerPack}</p>
-            <button onClick={() => handleDelete(product.id)} className="delete-button primary-button" style={{backgroundColor:'red', marginTop:'20px'}}>
-              Remove
-            </button>
-          </div>
-        ))}
+      <button onClick={handlePrint} className="primary-button" style={{ marginBottom: '20px' }}>
+        Print Products
+      </button>
+
+      {/* Displaying the product list in a table format */}
+      <div className="product-table">
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+          <thead>
+            <tr>
+              <th style={tableHeaderStyle}>Product Name</th>
+              <th style={tableHeaderStyle}>Price (PKR)</th>
+              <th style={tableHeaderStyle}>Expiry Date</th>
+              <th style={tableHeaderStyle}>Company</th>
+              <th style={tableHeaderStyle}>Selling Price (PKR)</th>
+              <th style={tableHeaderStyle}>Tabs Per Pack</th>
+              <th style={tableHeaderStyle}>Vendor Name</th>
+              <th style={tableHeaderStyle}>Vendor Company</th>
+              <th style={tableHeaderStyle}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map(product => (
+              <tr key={product.id}>
+                <td style={tableCellStyle}>{product.productName}</td>
+                <td style={tableCellStyle}>{product.purchasePrice}</td>
+                <td style={tableCellStyle}>{product.productExpiry}</td>
+                <td style={tableCellStyle}>{product.productCompany}</td>
+                <td style={tableCellStyle}>{product.sellingPrice}</td>
+                <td style={tableCellStyle}>{product.tabsPerPack}</td>
+                <td style={tableCellStyle}>{product.vendorName || 'N/A'}</td>
+                <td style={tableCellStyle}>{product.companyName || 'N/A'}</td>
+                <td style={tableCellStyle}>
+                  <button onClick={() => handleDelete(product.id)} className="delete-button" style={deleteButtonStyle}>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Hidden content for printing */}
+      <div id="print-area" style={{ display: 'none' }}>
+        <h1 >BUTT PHARMACY</h1>
+        <p >{new Date().toLocaleString()}</p>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+          <thead>
+            <tr>
+              <th style={tableHeaderStyle}>Product Name</th>
+              <th style={tableHeaderStyle}>Price (PKR)</th>
+              <th style={tableHeaderStyle}>Expiry Date</th>
+              <th style={tableHeaderStyle}>Company</th>
+              <th style={tableHeaderStyle}>Selling Price (PKR)</th>
+              <th style={tableHeaderStyle}>Tabs Per Pack</th>
+              <th style={tableHeaderStyle}>Vendor Name</th>
+              <th style={tableHeaderStyle}>Vendor Company</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map(product => (
+              <tr key={product.id}>
+                <td style={tableCellStyle}>{product.productName}</td>
+                <td style={tableCellStyle}>{product.purchasePrice}</td>
+                <td style={tableCellStyle}>{product.productExpiry}</td>
+                <td style={tableCellStyle}>{product.productCompany}</td>
+                <td style={tableCellStyle}>{product.sellingPrice}</td>
+                <td style={tableCellStyle}>{product.tabsPerPack}</td>
+                <td style={tableCellStyle}>{product.vendorName || 'N/A'}</td>
+                <td style={tableCellStyle}>{product.companyName || 'N/A'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
+};
+
+// Inline styles for the table
+const tableHeaderStyle = {
+  border: '1px solid black',
+  padding: '10px',
+  backgroundColor: '#f4f4f4',
+  fontWeight: 'bold',
+
+};
+
+const tableCellStyle = {
+  border: '1px solid black',
+  padding: '10px',
+
+};
+
+const deleteButtonStyle = {
+  backgroundColor: 'red',
+  color: 'white',
+  padding: '5px 10px',
+  border: 'none',
+  cursor: 'pointer',
+  borderRadius: '5px',
 };
 
 export default ProductList;

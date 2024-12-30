@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { query, where, collection, addDoc, updateDoc, getDocs } from 'firebase/firestore';
+
 import { firestore } from '../firebase';
 
 const ProductTable = () => {
@@ -86,6 +87,7 @@ const ProductTable = () => {
   const handleSaveAll = async () => {
     try {
       const productsCollection = collection(firestore, 'products');
+  
       for (const product of newProducts) {
         if (
           !product.productName ||
@@ -95,13 +97,40 @@ const ProductTable = () => {
           alert('Please fill all required fields.');
           return;
         }
-        const newRow = {
-          ...product,
-          vendorName: vendorDetails.vendorName,
-          companyName: vendorDetails.companyName,
-        };
-        await addDoc(productsCollection, newRow);
+  
+        // Check if the product with the same name and company exists
+        const querySnapshot = await getDocs(
+          query(
+            productsCollection,
+            where('productName', '==', product.productName),
+            where('productCompany', '==', product.productCompany)
+          )
+        );
+  
+        if (!querySnapshot.empty) {
+          // If the product exists, update the quantity and ensure vendor details are correct
+          const existingDoc = querySnapshot.docs[0];
+          const existingData = existingDoc.data();
+          const updatedQuantity =
+            parseInt(existingData.productQuantity, 10) +
+            parseInt(product.productQuantity, 10);
+  
+          await updateDoc(existingDoc.ref, {
+            productQuantity: updatedQuantity,
+            vendorName: vendorDetails.vendorName,
+            companyName: vendorDetails.companyName,
+          });
+        } else {
+          // If the product doesn't exist, add a new document with vendor details
+          const newRow = {
+            ...product,
+            vendorName: vendorDetails.vendorName,
+            companyName: vendorDetails.companyName,
+          };
+          await addDoc(productsCollection, newRow);
+        }
       }
+  
       alert('Products saved successfully!');
       setNewProducts([
         {
@@ -119,6 +148,7 @@ const ProductTable = () => {
       alert('Failed to save products. Please try again.');
     }
   };
+  
 
   const handlePrint = () => {
     const printContent = `
