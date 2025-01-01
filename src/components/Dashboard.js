@@ -77,10 +77,10 @@ const Dashboard = () => {
           // Use for...of loop to properly handle async operations
           for (const doc of accountSnapshot.docs) {
             const data = doc.data();
-            const amount = data.amount || 0; // Default to 0 if amount is missing
+            const total = data.total || 0; // Default to 0 if total is missing
         
-            console.log(`Amount for ${account.name}:`, amount); // Log the amount of each account document
-            totalBalance += amount;
+            console.log(`Amount for ${account.name}:`, total); // Log the total of each account document
+            totalBalance += total;
           }
         }
         
@@ -163,7 +163,7 @@ const Dashboard = () => {
               saleDate.setHours(0, 0, 0, 0);
   
               if (saleDate.getTime() === today.getTime()) {
-                todaysSales += data.amount || 0; // Sum today's sales
+                todaysSales += data.total || 0; // Sum today's sales
               }
             }
           });
@@ -245,10 +245,7 @@ const Dashboard = () => {
           <p>PKR {totalProfit.toFixed(2)}</p>
         </div>
 
-          <div className="stat-box">
-            <h4>Total Sale</h4>
-            <p>PKR {totalSale.toFixed(2)}</p>
-          </div>
+
         </div>
       </div>
 

@@ -65,13 +65,24 @@ const Sellings = () => {
 
   const currentDate = new Date().toLocaleString(); // Get the current date in a readable format
 
+  // Calculate the total sale amount
+  const totalSale = sales.reduce((total, sale) => {
+    const totalPrice = sale.items.reduce((sum, item) => sum + item.subtotal, 0);
+    return total + totalPrice;
+  }, 0).toFixed(2); // Format to 2 decimal places
+
   return (
     <section className="section">
       {/* UI section */}
       <h1>Sales Report</h1>
       <button onClick={handlePrint} className="primary-button" style={{ margin: '10px', padding: '5px 10px', backgroundColor: '#4CAF50', color: 'white' }}>
-        Print DEtails
+        Print Details
       </button>
+
+      {/* Display Total Sale */}
+      <div style={{ marginBottom: '20px', fontSize: '18px', fontWeight: 'bold' }}>
+        <p>Total Sale: {totalSale} PKR</p>
+      </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
@@ -81,7 +92,6 @@ const Sellings = () => {
             <th style={{ border: '1px solid #000', padding: '8px' }}>Product Name</th>
             <th style={{ border: '1px solid #000', padding: '8px' }}>Quantity</th>
             <th style={{ border: '1px solid #000', padding: '8px' }}>Total Price (PKR)</th>
-            <th style={{ border: '1px solid #000', padding: '8px' }}>Profit (PKR)</th>
             <th style={{ border: '1px solid #000', padding: '8px' }}>Payment Method</th>
           </tr>
         </thead>
@@ -102,7 +112,6 @@ const Sellings = () => {
                 <td style={{ border: '1px solid #000', padding: '8px' }}>{productNames}</td>
                 <td style={{ border: '1px solid #000', padding: '8px' }}>{totalQuantity}</td>
                 <td style={{ border: '1px solid #000', padding: '8px' }}>{totalPrice}</td>
-                <td style={{ border: '1px solid #000', padding: '8px' }}>{profit}</td>
                 <td style={{ border: '1px solid #000', padding: '8px' }}>{sale.paymentMethod}</td>
               </tr>
             );
@@ -113,8 +122,9 @@ const Sellings = () => {
       {/* Hidden Print Area */}
       <div id="print-area" style={{ display: 'none' }}>
         {/* Print Header */}
-        <h1 >BUTT PHARMACY</h1>
-        <p >{currentDate}</p>
+        <h1>BUTT PHARMACY</h1>
+        <p>{currentDate}</p>
+        <p>Total Sale: {totalSale} PKR</p>
 
         {/* Table for Printing */}
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
