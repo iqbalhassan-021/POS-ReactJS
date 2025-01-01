@@ -14,6 +14,7 @@ const Sidebar = ({ onSectionChange }) => (
       <button onClick={() => onSectionChange('vendors')}>Vendors</button>
       <button onClick={() => onSectionChange('sellings')}>Sellings</button>
       <button onClick={() => onSectionChange('stock')}>Stock</button>
+      <button onClick={() => onSectionChange('Profits')}>Profits</button>
       <button onClick={() => onSectionChange('cash')}>Cash</button>
       <button onClick={() => onSectionChange('DuesSpending')}>Dues & Spending</button>
     </nav>

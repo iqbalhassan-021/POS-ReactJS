@@ -14,6 +14,7 @@ import Cash from './components/CashComponent';
 import Vendors from './components/Vendors';
 import DuesSpending from './components/DuesSpending';
 import Dashboard  from './components/Dashboard';
+import Profits  from './components/Profits';
 import './App.css';
 
 const App = () => {
@@ -43,6 +44,7 @@ const App = () => {
         {activeSection === 'searchProduct' && <SearchProduct />}
         {activeSection === 'pos' && <POS />}
         {activeSection === 'expiringSoon' && <ExpiringSoon />}
+        {activeSection === 'Profits' && <Profits />}
         {activeSection === 'sellings' && <Sellings />}
         {activeSection === 'stock' && <Stock />}
         {activeSection === 'cash' && <Cash />}
