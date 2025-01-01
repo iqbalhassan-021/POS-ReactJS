@@ -135,14 +135,13 @@ const POS = () => {
         total,
         customerName,
         paymentMethod,
-        amount: givenCash, // Use 'amount' instead of 'givenCash'
+        amount: givenCash,
         remainingBalance: remaining,
         date: new Date(),
       };
   
-      // Save bill data in the selected payment method collection
       const paymentData = {
-        amount: givenCash, // Standardize field name as 'amount'
+        amount: givenCash,
         customerName,
         remainingBalance: remaining,
         transactionDate: new Date(),
@@ -151,21 +150,18 @@ const POS = () => {
       };
   
       if (paymentMethod === 'Cash') {
-        // Save bill in 'Cash' collection
         await addDoc(collection(firestore, 'Cash'), billData);
       } else {
-        // Save bill in the chosen payment method collection
         await addDoc(collection(firestore, paymentMethod), paymentData);
       }
   
-      // Save remaining balance in 'remaings' collection
       await addDoc(collection(firestore, 'remaings'), {
         customerName,
         remainingBalance: remaining,
         date: new Date(),
       });
   
-      // Update product quantities
+      // Update product quantities and calculate profit
       for (let item of cart) {
         if (item.product && item.quantity > 0) {
           try {
@@ -175,15 +171,26 @@ const POS = () => {
             if (!productSnap.exists()) continue;
   
             const productData = productSnap.data();
-  
-            if (productData.productQuantity === undefined || productData.productQuantity === null) continue;
-  
-            const currentQuantity = productData.productQuantity;
+            const currentQuantity = productData.productQuantity ?? 0;
             const newQuantity = currentQuantity - item.quantity;
   
-            if (newQuantity < 0) continue;
+            if (newQuantity >= 0) {
+              await updateDoc(productRef, { productQuantity: newQuantity });
   
-            await updateDoc(productRef, { productQuantity: newQuantity });
+              // Calculate profit
+              const sellingPrice = item.product.sellingPrice;
+              const purchasePrice = productData.purchasePrice; // Assuming `purchasePrice` exists in Firestore
+              const profit = (sellingPrice - purchasePrice) * item.quantity;
+  
+              // Save profit data
+              await addDoc(collection(firestore, 'profits'), {
+                productId: item.product.id,
+                productName: item.product.productName,
+                quantitySold: item.quantity,
+                profit,
+                date: new Date(),
+              });
+            }
           } catch (error) {
             console.error(`Error updating product ID ${item.product.id}:`, error.message);
           }
@@ -199,6 +206,7 @@ const POS = () => {
       console.error('Error during payment process:', error.message);
     }
   };
+  
   const handlePrint = () => {
     const printContent = `
       <div>

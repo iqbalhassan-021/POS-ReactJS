@@ -108,7 +108,121 @@ const Dashboard = () => {
       },
     ],
   };
-
+  
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch profits data
+        const profitsSnapshot = await getDocs(collection(firestore, 'profits'));
+  
+        // Get today's date at midnight
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+  
+        let todaysProfit = 0;
+  
+        profitsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          
+          // Firestore timestamp to JS Date conversion
+          const profitDate = data.date.toDate(); // Convert Firestore timestamp to JS Date
+          profitDate.setHours(0, 0, 0, 0);
+  
+          if (profitDate.getTime() === today.getTime()) {
+            todaysProfit += data.profit || 0; // Sum profits for today
+          }
+        });
+  
+        console.log('Today\'s profit:', todaysProfit); // Debugging log
+        setTotalProfit(todaysProfit); // Update state
+      } catch (error) {
+        console.error('Error fetching profits data:', error);
+      }
+    };
+  
+    fetchDashboardData();
+  }, []);
+  
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch today's date at midnight
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+  
+        let todaysSales = 0; // Initialize today's sales
+  
+        for (const account of accounts) {
+          const accountSnapshot = await getDocs(collection(firestore, account.collectionName));
+  
+          accountSnapshot.forEach((doc) => {
+            const data = doc.data();
+  
+            if (data.date) {
+              const saleDate = data.date.toDate(); // Convert Firestore timestamp to JS Date
+              saleDate.setHours(0, 0, 0, 0);
+  
+              if (saleDate.getTime() === today.getTime()) {
+                todaysSales += data.amount || 0; // Sum today's sales
+              }
+            }
+          });
+        }
+  
+        console.log("Today's Sales:", todaysSales); // Debugging log
+        setDailySales(todaysSales); // Update state for today's sales
+      } catch (error) {
+        console.error('Error fetching today\'s sales:', error);
+      }
+    };
+  
+    fetchDashboardData();
+  }, []);
+  useEffect(() => {
+    const fetchWeeklySalesData = async () => {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+  
+        const weeklySalesData = [];
+        const daysInWeek = 7;
+  
+        for (let i = 0; i < daysInWeek; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i); // Go back 'i' days
+          const formattedDate = date.toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
+          let dailySales = 0;
+  
+          // Fetch data for this specific day from all accounts
+          for (const account of accounts) {
+            const accountSnapshot = await getDocs(collection(firestore, account.collectionName));
+  
+            accountSnapshot.forEach((doc) => {
+              const data = doc.data();
+  
+              if (data.date) {
+                const saleDate = data.date.toDate(); // Convert Firestore timestamp to JS Date
+                saleDate.setHours(0, 0, 0, 0);
+  
+                if (saleDate.getTime() === date.getTime()) {
+                  dailySales += data.amount || 0;
+                }
+              }
+            });
+          }
+  
+          weeklySalesData.push({ date: formattedDate, sales: dailySales });
+        }
+  
+        setWeeklySales(weeklySalesData.reverse()); // Reverse to get ascending order
+      } catch (error) {
+        console.error('Error fetching weekly sales data:', error);
+      }
+    };
+  
+    fetchWeeklySalesData();
+  }, []);
+  
   return (
     <div className="dashboard">
       <div className="first-row">
@@ -122,13 +236,15 @@ const Dashboard = () => {
             <p>{productCount}</p>
           </div>
           <div className="stat-box">
-            <h4>Today's Sales</h4>
-            <p>PKR {dailySales.toFixed(2)}</p>
-          </div>
+          <h4>Today's Sales</h4>
+          <p>PKR {dailySales.toFixed(2)}</p>
+        </div>
+
           <div className="stat-box">
-            <h4>Total Profit</h4>
-            <p>PKR {totalProfit.toFixed(2)}</p>
-          </div>
+          <h4>Total Profit</h4>
+          <p>PKR {totalProfit.toFixed(2)}</p>
+        </div>
+
           <div className="stat-box">
             <h4>Total Sale</h4>
             <p>PKR {totalSale.toFixed(2)}</p>
