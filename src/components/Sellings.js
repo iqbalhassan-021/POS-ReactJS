@@ -135,31 +135,52 @@ const Sellings = () => {
               <th style={{ border: '1px solid #000', padding: '8px' }}>Product Name</th>
               <th style={{ border: '1px solid #000', padding: '8px' }}>Quantity</th>
               <th style={{ border: '1px solid #000', padding: '8px' }}>Total Price (PKR)</th>
-              <th style={{ border: '1px solid #000', padding: '8px' }}>Profit (PKR)</th>
+
               <th style={{ border: '1px solid #000', padding: '8px' }}>Payment Method</th>
             </tr>
           </thead>
           <tbody>
-            {sales.map((sale) => {
-              const saleDate = new Date(sale.date.seconds * 1000).toISOString().split('T')[0];
-              const totalQuantity = sale.items.reduce((total, item) => total + item.quantity, 0);
-              const totalPrice = sale.items.reduce((total, item) => total + item.subtotal, 0).toFixed(2);
-              const productNames = sale.items.map((item) => item.product.productName).join(', '); // Extract productName
+          <tbody>
+  {sales && sales.length > 0 ? (
+    sales.map((sale, saleIndex) => {
+      const saleDate = sale?.date
+        ? new Date(sale.date.seconds * 1000).toISOString().split("T")[0]
+        : "Unknown Date";
 
-              const profit = profits[sale.id] !== undefined ? profits[sale.id].toFixed(2) : '0.00';
+      const totalQuantity = sale?.items?.reduce((total, item) => {
+        return total + (item?.quantity || 0);
+      }, 0) || 0;
 
-              return (
-                <tr key={sale.id}>
-                  <td style={{ border: '1px solid #000', padding: '8px' }}>{saleDate}</td>
-                  <td style={{ border: '1px solid #000', padding: '8px' }}>{sale.customerName}</td>
-                  <td style={{ border: '1px solid #000', padding: '8px' }}>{productNames}</td>
-                  <td style={{ border: '1px solid #000', padding: '8px' }}>{totalQuantity}</td>
-                  <td style={{ border: '1px solid #000', padding: '8px' }}>{totalPrice}</td>
-                  <td style={{ border: '1px solid #000', padding: '8px' }}>{profit}</td>
-                  <td style={{ border: '1px solid #000', padding: '8px' }}>{sale.paymentMethod}</td>
-                </tr>
-              );
-            })}
+      const totalPrice = sale?.items?.reduce((total, item) => {
+        return total + (item?.subtotal || 0);
+      }, 0).toFixed(2) || "0.00";
+
+      const productNames = sale?.items
+        ?.map((item) => item?.product?.productName || "Unknown Product")
+        .join(", ") || "No Products";
+
+      return (
+        <tr key={sale?.id || saleIndex}>
+          <td style={{ border: '1px solid #000', padding: '8px' }}>{saleDate}</td>
+          <td style={{ border: '1px solid #000', padding: '8px' }}>{sale?.customerName || "Unknown"}</td>
+          <td style={{ border: '1px solid #000', padding: '8px' }}>{productNames}</td>
+          <td style={{ border: '1px solid #000', padding: '8px' }}>{totalQuantity}</td>
+          <td style={{ border: '1px solid #000', padding: '8px' }}>{totalPrice}</td>
+          <td style={{ border: '1px solid #000', padding: '8px' }}>{sale?.paymentMethod || "N/A"}</td>
+        </tr>
+      );
+    })
+  ) : (
+    <tr>
+      <td colSpan="6" style={{ textAlign: "center", padding: "8px" }}>
+        No sales data available.
+      </td>
+    </tr>
+  )}
+</tbody>
+
+
+
           </tbody>
         </table>
       </div>
