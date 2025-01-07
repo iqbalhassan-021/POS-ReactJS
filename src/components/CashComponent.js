@@ -29,7 +29,7 @@ const CashComponent = () => {
         for (const account of accounts) {
           const accountCollection = collection(firestore, account.collectionName);
           const accountDocs = await getDocs(accountCollection);
-          const accountBalance = accountDocs.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
+          const accountBalance = accountDocs.docs.reduce((sum, doc) => sum + parseFloat(doc.data().amount || 0), 0);
           newBalances[account.name] = accountBalance;
         }
         setBalances(newBalances);
@@ -40,13 +40,38 @@ const CashComponent = () => {
 
     const fetchCustomerBalances = async () => {
       try {
-        const customerCollection = collection(firestore, 'remaings');
-        const customerDocs = await getDocs(customerCollection);
-        const customerData = customerDocs.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setCustomerBalances(customerData);
+        const customerData = [];
+
+        // Iterate over each account and fetch the balance data
+        for (const account of accounts) {
+          const accountCollection = collection(firestore, account.collectionName);
+          const accountDocs = await getDocs(accountCollection);
+
+          // Aggregate the balance for each customer
+          accountDocs.forEach((doc) => {
+            const customer = doc.data();
+            const remainingBalance = parseFloat(customer.remainingBalance) || 0;
+
+            // Check if this customer already exists in our list
+            const existingCustomer = customerData.find(c => c.customerName === customer.customerName);
+
+            if (existingCustomer) {
+              existingCustomer.remainingBalance += remainingBalance; // Add balance
+            } else {
+              customerData.push({
+                customerName: customer.customerName,
+                remainingBalance: remainingBalance,
+                date: customer.date,
+                id: doc.id
+              });
+            }
+          });
+        }
+
+        // Filter customers with negative remaining balance
+        const customersWithNegativeBalance = customerData.filter(customer => customer.remainingBalance < 0);
+
+        setCustomerBalances(customersWithNegativeBalance);
       } catch (error) {
         console.error('Error fetching customer balances:', error);
       }
@@ -69,44 +94,43 @@ const CashComponent = () => {
       alert('Please enter a valid amount.');
       return;
     }
-  
+
     if (type === 'withdraw' && inputAmount > balances[account]) {
       alert(`Insufficient balance in ${account}.`);
       return;
     }
-  
+
     try {
       const accountCollection = collection(firestore, account);
       const accountDocs = await getDocs(accountCollection);
-  
+
       if (!accountDocs.empty) {
         const accountDoc = accountDocs.docs[0];
         const currentBalance = accountDoc.data().amount;
-  
+
         // Deposit: Add the amount to the current balance
         const updatedBalance =
           type === 'withdraw' ? currentBalance - inputAmount : currentBalance + inputAmount;
-  
+
         const accountDocRef = doc(accountCollection, accountDoc.id);
         await updateDoc(accountDocRef, { amount: updatedBalance });
-  
+
         setBalances((prev) => ({
           ...prev,
           [account]: updatedBalance,
         }));
-  
+
         setInputAmounts((prev) => ({
           ...prev,
           [account]: '',
         }));
-  
+
         alert(`${type === 'withdraw' ? 'Withdrawn' : 'Deposited'} PKR ${inputAmount} successfully.`);
       }
     } catch (error) {
       console.error('Error updating balance:', error);
     }
   };
-  
 
   const handleDelete = async (customerId) => {
     try {

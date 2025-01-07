@@ -1,191 +1,223 @@
 import React, { useState, useEffect } from 'react';
-import { firestore } from '../firebase'; // Adjust the path to your firebase.js file
+import { firestore } from '../firebase'; // Adjust the import based on your setup
 import { collection, getDocs } from 'firebase/firestore';
 
-const accounts = [
-  { name: 'Cash', collectionName: 'Cash' },
-  { name: 'JazzCash', collectionName: 'JazzCash' },
-  { name: 'EasyPesa', collectionName: 'EasyPesa' },
-  { name: 'BankTransfer', collectionName: 'BankTransfer' },
-];
+const Sales = () => {
+  const [salesData, setSalesData] = useState([]); // To hold the sales data
+  const [detailedData, setDetailedData] = useState([]); // Detailed data for specific date
+  const [detailsVisible, setDetailsVisible] = useState(null); // For toggling details view
 
-const Sellings = () => {
-  const [sales, setSales] = useState([]);
-  const [profits, setProfits] = useState({}); // Store profits for each bill
+  const accounts = [
+    { name: 'Cash', collectionName: 'Cash' },
+    { name: 'JazzCash', collectionName: 'JazzCash' },
+    { name: 'EasyPesa', collectionName: 'EasyPesa' },
+    { name: 'BankTransfer', collectionName: 'BankTransfer' },
+  ];
 
-  // Fetch sales and profits data from Firestore
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const salesData = [];
-        const profitsData = {};
+        let allSalesData = [];
 
-        // Fetch sales data from each account collection
+        // Loop through all the accounts to fetch sales data
         for (const account of accounts) {
           const salesCollection = collection(firestore, account.collectionName);
           const salesDocs = await getDocs(salesCollection);
 
           salesDocs.forEach((doc) => {
             const saleData = doc.data();
-            salesData.push({
-              id: doc.id,
-              ...saleData,
-              account: account.name, // Add account name for reference
+
+            // Ensure that the date is a valid Date object
+            const saleDate = saleData.date ? saleData.date.toDate() : new Date();
+            const formattedDate = saleDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
+            // Store the sales separately
+            allSalesData.push({
+              date: formattedDate,
+              timestamp: saleDate, // Store the timestamp to use for sorting
+              totalSales: parseFloat(saleData.grandTotal) || 0,
+              customerName: saleData.customerName || 'Unknown', // Ensure customer name is not empty
+              amount: saleData.amount || 0,
+              paymentMethod: saleData.paymentMethod || 'Unknown',
+              account: account.name,
+              items: saleData.items || [],
             });
           });
         }
 
-        // Fetch profits data
-        const profitsCollection = collection(firestore, 'profits');
-        const profitsDocs = await getDocs(profitsCollection);
-        profitsDocs.forEach((doc) => {
-          const profit = doc.data().profit;
-          profitsData[doc.id] = profit; // Map sale ID to profit
-        });
-
-        setSales(salesData);
-        setProfits(profitsData);
+        setSalesData(allSalesData); // Set sales data without aggregation
       } catch (error) {
-        console.error('Error fetching data: ', error.message);
+        console.error('Error fetching data:', error.message);
       }
     };
 
     fetchData();
   }, []);
 
+  const formatDate = (date) => {
+    // Convert the timestamp to a human-readable format (MM/DD/YYYY)
+    const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+    return new Date(date).toLocaleDateString('en-US', options);
+  };
+
+  const formatTime = (timestamp) => {
+    // Convert timestamp to a human-readable time format (HH:MM:SS)
+    const options = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    return new Date(timestamp).toLocaleTimeString('en-US', options);
+  };
+
+  const handleViewDetails = (date) => {
+    // Toggle visibility of the details for the selected date
+    if (detailsVisible === date) {
+      // If details for this date are already visible, hide them
+      setDetailsVisible(null);
+    } else {
+      // If details for this date are not visible, show them
+      const filteredData = salesData.filter((sale) => sale.date === date);
+
+      // Sort by timestamp to ensure the correct order of sales by time
+      const sortedData = filteredData.sort((a, b) => a.timestamp - b.timestamp);
+
+      setDetailedData(sortedData);
+      setDetailsVisible(date); // Show details for the selected date
+    }
+  };
+
+  const aggregateSales = () => {
+    const aggregatedData = [];
+
+    salesData.forEach((sale) => {
+      const existingSale = aggregatedData.find((aggSale) => aggSale.date === sale.date);
+      
+      if (existingSale) {
+        existingSale.totalSales += sale.totalSales;
+        existingSale.totalProductsSold += sale.items.reduce((sum, item) => sum + item.quantity, 0);
+      } else {
+        aggregatedData.push({
+          date: sale.date,
+          totalSales: sale.totalSales,
+          totalProductsSold: sale.items.reduce((sum, item) => sum + item.quantity, 0),
+        });
+      }
+    });
+
+    return aggregatedData;
+  };
+
+  const aggregatedSalesData = aggregateSales();
+
   const handlePrint = () => {
-    const printArea = document.getElementById('print-area');
-    const printWindow = window.open('', '', 'height=500, width=800');
-    printWindow.document.write('<html><head><title>Print</title><style>table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #000; padding: 8px; text-align: left; }</style></head><body>');
-    printWindow.document.write(printArea.innerHTML);
+    const printContent = document.getElementById('print-content').innerHTML;
+    const printWindow = window.open('', '', 'height=800,width=800');
+    printWindow.document.write('<html><head><title>Sales Report</title>');
+    printWindow.document.write('<style>table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #000; padding: 8px; text-align: left; }</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write('<h1>BUT PHARMACY</h1>');
+    printWindow.document.write('<h2>Sales Report - ' + new Date().toLocaleString() + '</h2>');
+    printWindow.document.write(printContent);
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     printWindow.print();
   };
 
-  const currentDate = new Date().toLocaleString(); // Get the current date in a readable format
-
-  // Calculate the total sale amount
-  const totalSale = sales.reduce((total, sale) => {
-    const totalPrice = sale.items.reduce((sum, item) => sum + item.subtotal, 0);
-    return total + totalPrice;
-  }, 0).toFixed(2); // Format to 2 decimal places
-
   return (
     <section className="section">
-      {/* UI section */}
       <h1>Sales Report</h1>
-      <button onClick={handlePrint} className="primary-button" style={{ margin: '10px', padding: '5px 10px', backgroundColor: '#4CAF50', color: 'white' }}>
-        Print Details
-      </button>
-
-      {/* Display Total Sale */}
-      <div style={{ marginBottom: '20px', fontSize: '18px', fontWeight: 'bold' }}>
-        <p>Total Sale: {totalSale} PKR</p>
-      </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <th style={{ border: '1px solid #000', padding: '8px' }}>Date</th>
-            <th style={{ border: '1px solid #000', padding: '8px' }}>Customer Name</th>
-            <th style={{ border: '1px solid #000', padding: '8px' }}>Product Name</th>
-            <th style={{ border: '1px solid #000', padding: '8px' }}>Quantity</th>
-            <th style={{ border: '1px solid #000', padding: '8px' }}>Total Price (PKR)</th>
-            <th style={{ border: '1px solid #000', padding: '8px' }}>Payment Method</th>
+            <th style={{ border: '1px solid #000', padding: '8px' }}>Total Sales (PKR)</th>
+            <th style={{ border: '1px solid #000', padding: '8px' }}>Total Products Sold</th>
+            <th style={{ border: '1px solid #000', padding: '8px' }}>Action</th>
           </tr>
         </thead>
         <tbody>
-          {sales.map((sale) => {
-            const saleDate = new Date(sale.date.seconds * 1000).toISOString().split('T')[0];
-            const totalQuantity = sale.items.reduce((total, item) => total + item.quantity, 0);
-            const totalPrice = sale.items.reduce((total, item) => total + item.subtotal, 0).toFixed(2);
-            const productNames = sale.items.map((item) => item.product.productName).join(', '); // Extract productName
-
-            // Check if profit data exists for this sale
-            const profit = profits[sale.id] !== undefined ? profits[sale.id].toFixed(2) : '0.00';
-
-            return (
-              <tr key={sale.id}>
-                <td style={{ border: '1px solid #000', padding: '8px' }}>{saleDate}</td>
-                <td style={{ border: '1px solid #000', padding: '8px' }}>{sale.customerName}</td>
-                <td style={{ border: '1px solid #000', padding: '8px' }}>{productNames}</td>
-                <td style={{ border: '1px solid #000', padding: '8px' }}>{totalQuantity}</td>
-                <td style={{ border: '1px solid #000', padding: '8px' }}>{totalPrice}</td>
-                <td style={{ border: '1px solid #000', padding: '8px' }}>{sale.paymentMethod}</td>
-              </tr>
-            );
-          })}
+          {aggregatedSalesData.map((sale, index) => (
+            <tr key={index}>
+              <td style={{ border: '1px solid #000', padding: '8px' }}>
+                {formatDate(sale.date)} {/* Display date only */}
+              </td>
+              <td style={{ border: '1px solid #000', padding: '8px' }}>
+                {sale.totalSales.toFixed(2)}
+              </td>
+              <td style={{ border: '1px solid #000', padding: '8px' }}>
+                {sale.totalProductsSold}
+              </td>
+              <td style={{ border: '1px solid #000', padding: '8px' }}>
+                <button
+                  onClick={() => handleViewDetails(sale.date)}
+                  className="primary-button"
+                  style={{ backgroundColor: '#4CAF50', color: 'white' }}
+                >
+                  {detailsVisible === sale.date ? 'Close Details' : 'View Details'}
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="primary-button"
+                  style={{ backgroundColor: '#008CBA', color: 'white', marginLeft: '10px' }}
+                >
+                  Print
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
 
-      {/* Hidden Print Area */}
-      <div id="print-area" style={{ display: 'none' }}>
-        {/* Print Header */}
-        <h1>BUTT PHARMACY</h1>
-        <p>{currentDate}</p>
-        <p>Total Sale: {totalSale} PKR</p>
-
-        {/* Table for Printing */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #000', padding: '8px' }}>Date</th>
-              <th style={{ border: '1px solid #000', padding: '8px' }}>Customer Name</th>
-              <th style={{ border: '1px solid #000', padding: '8px' }}>Product Name</th>
-              <th style={{ border: '1px solid #000', padding: '8px' }}>Quantity</th>
-              <th style={{ border: '1px solid #000', padding: '8px' }}>Total Price (PKR)</th>
-
-              <th style={{ border: '1px solid #000', padding: '8px' }}>Payment Method</th>
-            </tr>
-          </thead>
-          <tbody>
-          <tbody>
-  {sales && sales.length > 0 ? (
-    sales.map((sale, saleIndex) => {
-      const saleDate = sale?.date
-        ? new Date(sale.date.seconds * 1000).toISOString().split("T")[0]
-        : "Unknown Date";
-
-      const totalQuantity = sale?.items?.reduce((total, item) => {
-        return total + (item?.quantity || 0);
-      }, 0) || 0;
-
-      const totalPrice = sale?.items?.reduce((total, item) => {
-        return total + (item?.subtotal || 0);
-      }, 0).toFixed(2) || "0.00";
-
-      const productNames = sale?.items
-        ?.map((item) => item?.product?.productName || "Unknown Product")
-        .join(", ") || "No Products";
-
-      return (
-        <tr key={sale?.id || saleIndex}>
-          <td style={{ border: '1px solid #000', padding: '8px' }}>{saleDate}</td>
-          <td style={{ border: '1px solid #000', padding: '8px' }}>{sale?.customerName || "Unknown"}</td>
-          <td style={{ border: '1px solid #000', padding: '8px' }}>{productNames}</td>
-          <td style={{ border: '1px solid #000', padding: '8px' }}>{totalQuantity}</td>
-          <td style={{ border: '1px solid #000', padding: '8px' }}>{totalPrice}</td>
-          <td style={{ border: '1px solid #000', padding: '8px' }}>{sale?.paymentMethod || "N/A"}</td>
-        </tr>
-      );
-    })
-  ) : (
-    <tr>
-      <td colSpan="6" style={{ textAlign: "center", padding: "8px" }}>
-        No sales data available.
-      </td>
-    </tr>
-  )}
-</tbody>
-
-
-
-          </tbody>
-        </table>
-      </div>
+      {/* Detailed Data Table */}
+      {detailsVisible && (
+        <div style={{ marginTop: '20px' }}>
+          <div id="print-content">
+            <h2>Sales Details for {detailsVisible}</h2>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ border: '1px solid #000', padding: '8px' }}>Customer Name</th>
+                  <th style={{ border: '1px solid #000', padding: '8px' }}>Time</th>
+                  <th style={{ border: '1px solid #000', padding: '8px' }}>Amount (PKR)</th>
+                  <th style={{ border: '1px solid #000', padding: '8px' }}>Payment Method</th>
+                  <th style={{ border: '1px solid #000', padding: '8px' }}>Account</th>
+                  <th style={{ border: '1px solid #000', padding: '8px' }}>Items</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailedData.map((sale, index) => (
+                  <tr key={index}>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      {sale.customerName}
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      {formatTime(sale.timestamp)} {/* Display time for each sale */}
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      {sale.amount ? sale.amount.toFixed(2) : '0.00'}
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      {sale.paymentMethod}
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      {sale.account}
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      {sale.items && sale.items.length > 0 ? (
+                        sale.items.map((item, idx) => (
+                          <div key={idx}>{item.productName}: {item.quantity}</div>
+                        ))
+                      ) : (
+                        <span>No items</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
 
-export default Sellings;
+export default Sales;

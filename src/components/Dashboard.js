@@ -22,7 +22,7 @@ const Dashboard = () => {
   const [totalProfit, setTotalProfit] = useState(0);
   const [expiringProducts, setExpiringProducts] = useState([]);
   const [expiredProducts, setExpiredProducts] = useState([]);
-  const [lowStockProducts, setLowStockProducts] = useState([]); // New state for low stock products
+  const [lowStockProducts, setLowStockProducts] = useState([]);
   const [totalSale, setTotalSale] = useState(0);
 
   const accounts = [
@@ -71,24 +71,59 @@ const Dashboard = () => {
         for (const account of accounts) {
           const accountSnapshot = await getDocs(collection(firestore, account.collectionName));
         
-          // Log the account data for debugging
-          console.log(`Fetching balance for ${account.name} collection:`, account.collectionName);
-        
           // Use for...of loop to properly handle async operations
           for (const doc of accountSnapshot.docs) {
             const data = doc.data();
             const total = data.total || 0; // Default to 0 if total is missing
-        
-            console.log(`Amount for ${account.name}:`, total); // Log the total of each account document
             totalBalance += total;
           }
         }
         
-        // Log the final total balance
-        console.log('Total Sale (Total Amount from all accounts):', totalBalance);
-        
         setTotalSale(totalBalance); // Set total sale as the sum of all amounts
-        
+
+        // Fetch profits and today's sales
+        const profitsSnapshot = await getDocs(collection(firestore, 'profits'));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+  
+        let todaysProfit = 0;
+        let todaysSales = 0;
+
+        // Profit calculation
+        profitsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const profitDate = data.date.toDate();
+          profitDate.setHours(0, 0, 0, 0);
+
+          if (profitDate.getTime() === today.getTime()) {
+            todaysProfit += parseFloat(data.profit) || 0;
+          }
+        });
+
+             // Sales calculation from each account
+      for (const account of accounts) {
+        const accountSnapshot = await getDocs(collection(firestore, account.collectionName));
+
+        accountSnapshot.forEach((doc) => {
+          const data = doc.data();
+
+          if (data.date) {
+            const saleDate = data.date.toDate(); // Convert Firestore timestamp to JS Date
+            saleDate.setHours(0, 0, 0, 0);
+
+            // Log for debugging
+            console.log("Sale Date:", saleDate);
+            console.log("Today's Date:", today);
+
+            if (saleDate.getTime() === today.getTime()) {
+              todaysSales += data.total || 0; // Sum today's sales
+            }
+          }
+        });
+      }
+
+      setDailySales(todaysSales); // Update state for today's sales
+      setTotalProfit(todaysProfit); // Set total profit
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
@@ -108,121 +143,7 @@ const Dashboard = () => {
       },
     ],
   };
-  
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // Fetch profits data
-        const profitsSnapshot = await getDocs(collection(firestore, 'profits'));
-  
-        // Get today's date at midnight
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-  
-        let todaysProfit = 0;
-  
-        profitsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          
-          // Firestore timestamp to JS Date conversion
-          const profitDate = data.date.toDate(); // Convert Firestore timestamp to JS Date
-          profitDate.setHours(0, 0, 0, 0);
-  
-          if (profitDate.getTime() === today.getTime()) {
-            todaysProfit += data.profit || 0; // Sum profits for today
-          }
-        });
-  
-        console.log('Today\'s profit:', todaysProfit); // Debugging log
-        setTotalProfit(todaysProfit); // Update state
-      } catch (error) {
-        console.error('Error fetching profits data:', error);
-      }
-    };
-  
-    fetchDashboardData();
-  }, []);
-  
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // Fetch today's date at midnight
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-  
-        let todaysSales = 0; // Initialize today's sales
-  
-        for (const account of accounts) {
-          const accountSnapshot = await getDocs(collection(firestore, account.collectionName));
-  
-          accountSnapshot.forEach((doc) => {
-            const data = doc.data();
-  
-            if (data.date) {
-              const saleDate = data.date.toDate(); // Convert Firestore timestamp to JS Date
-              saleDate.setHours(0, 0, 0, 0);
-  
-              if (saleDate.getTime() === today.getTime()) {
-                todaysSales += data.total || 0; // Sum today's sales
-              }
-            }
-          });
-        }
-  
-        console.log("Today's Sales:", todaysSales); // Debugging log
-        setDailySales(todaysSales); // Update state for today's sales
-      } catch (error) {
-        console.error('Error fetching today\'s sales:', error);
-      }
-    };
-  
-    fetchDashboardData();
-  }, []);
-  useEffect(() => {
-    const fetchWeeklySalesData = async () => {
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-  
-        const weeklySalesData = [];
-        const daysInWeek = 7;
-  
-        for (let i = 0; i < daysInWeek; i++) {
-          const date = new Date(today);
-          date.setDate(today.getDate() - i); // Go back 'i' days
-          const formattedDate = date.toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
-          let dailySales = 0;
-  
-          // Fetch data for this specific day from all accounts
-          for (const account of accounts) {
-            const accountSnapshot = await getDocs(collection(firestore, account.collectionName));
-  
-            accountSnapshot.forEach((doc) => {
-              const data = doc.data();
-  
-              if (data.date) {
-                const saleDate = data.date.toDate(); // Convert Firestore timestamp to JS Date
-                saleDate.setHours(0, 0, 0, 0);
-  
-                if (saleDate.getTime() === date.getTime()) {
-                  dailySales += data.amount || 0;
-                }
-              }
-            });
-          }
-  
-          weeklySalesData.push({ date: formattedDate, sales: dailySales });
-        }
-  
-        setWeeklySales(weeklySalesData.reverse()); // Reverse to get ascending order
-      } catch (error) {
-        console.error('Error fetching weekly sales data:', error);
-      }
-    };
-  
-    fetchWeeklySalesData();
-  }, []);
-  
+
   return (
     <div className="dashboard">
       <div className="first-row">
@@ -235,17 +156,11 @@ const Dashboard = () => {
             <h4>Total Products</h4>
             <p>{productCount}</p>
           </div>
-          <div className="stat-box">
-          <h4>Today's Sales</h4>
-          <p>PKR {dailySales.toFixed(2)}</p>
-        </div>
 
           <div className="stat-box">
-          <h4>Total Profit</h4>
-          <p>PKR {totalProfit.toFixed(2)}</p>
-        </div>
-
-
+            <h4>Total Profit</h4>
+            <p>PKR {totalProfit.toFixed(2)}</p>
+          </div>
         </div>
       </div>
 
@@ -265,36 +180,39 @@ const Dashboard = () => {
           </ul>
         </div>
 
-        <div className="expired-products">
-          <div className="expiring-products">
-            <h3>Expired Products</h3>
-            <ul>
-              {expiredProducts.length > 0 ? (
-                expiredProducts.map((product, index) => (
-                  <li key={index}>{product.productName} - Expired</li>
-                ))
-              ) : (
-                <p>No expired products.</p>
-              )}
-            </ul>
-          </div>
+        <div className="expiring-products">
+          <h3>Expired Products</h3>
+          <ul>
+            {expiredProducts.length > 0 ? (
+              expiredProducts.map((product, index) => (
+                <li key={index}>{product.productName} - Expired</li>
+              ))
+            ) : (
+              <p>No expired products.</p>
+            )}
+          </ul>
         </div>
 
-        <div className="low-stock-products"> {/* New Section */}
-          <div className="expiring-products">
-            <h3>Low Stock Products (Less than 10)</h3>
-            <ul>
-              {lowStockProducts.length > 0 ? (
-                lowStockProducts.map((product, index) => (
-                  <li key={index}>
-                    {product.productName} - Quantity: {product.productQuantity}
-                  </li>
-                ))
-              ) : (
-                <p>No low-stock products.</p>
-              )}
-            </ul>
-          </div>
+        <div className="expiring-products">
+          <h3>Low Stock Products (Less than 10)</h3>
+          <ul>
+            {lowStockProducts.length > 0 ? (
+              lowStockProducts.map((product, index) => (
+                <li
+                  key={index}
+                  style={{
+                    backgroundColor: product.productQuantity <= 10 ? 'red' : 'transparent',
+                    color: product.productQuantity <= 10 ? 'white' : 'black', // Optional: Change text color for better readability
+                  }}
+                >
+                  {product.productName} - Quantity: {product.productQuantity}
+                </li>
+              ))
+            ) : (
+              <p>No low-stock products.</p>
+            )}
+          </ul>
+
         </div>
       </div>
     </div>

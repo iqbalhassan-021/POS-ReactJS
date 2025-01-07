@@ -7,7 +7,7 @@ const Sidebar = ({ onSectionChange }) => (
        <button onClick={() => onSectionChange('Dashboard')}>Dashboard </button>
       <button onClick={() => onSectionChange('pos')}>POS</button>
       <button onClick={() => onSectionChange('cash')}>Cash</button>
-      <button onClick={() => onSectionChange('addProduct')}>Add Product</button>
+      <button onClick={() => onSectionChange('addProduct')}>Purchase</button>
       <button onClick={() => onSectionChange('productList')}>Product List</button>
       <button onClick={() => onSectionChange('searchProduct')}>Search Product</button>
       <button onClick={() => onSectionChange('expiringSoon')}>Expiries</button>

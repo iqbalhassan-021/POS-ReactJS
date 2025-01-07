@@ -609,7 +609,64 @@ th {
 button {
   margin-top: 10px;
 }
+.input-container {
+  display: flex;
+  gap: 10px; /* Space between each input field */
+  margin-bottom: 20px;
 
+}
+
+.input-container input,
+.input-container select {
+  padding: 8px;
+  font-size: 16px;
+
+}
+.product-suggestions {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 5px;
+}
+
+.product-suggestions li {
+  background-color: #f1f1f1;
+  padding: 8px;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+
+.product-suggestions li:hover {
+  background-color: #ddd;
+}
+
+.input-container button {
+  padding: 8px 16px;
+  font-size: 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.input-container button:hover {
+  background-color: #45a049;
+}
+.product-suggestions {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 5px;
+}
+
+.product-suggestions li {
+  background-color: #f1f1f1;
+  padding: 8px;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+
+.product-suggestions li:hover {
+  background-color: #ddd;
+}
 /* Responsive Styles */
 @media (max-width: 768px) {
   .dashboard {
