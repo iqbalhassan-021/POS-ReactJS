@@ -25,6 +25,7 @@ const ProductTable = () => {
     sellingPrice: '',
     productExpiry: '',
     tabsPerPack: '',
+    gname: '',
   }]);
 
   const [vendors, setVendors] = useState([]);
@@ -421,6 +422,7 @@ const ProductTable = () => {
         <thead>
           <tr>
             <th>Product Name</th>
+            <th>Generic Name</th>
             <th>Company</th>
             <th>Quantity</th>
             <th>Purchase Price</th>
@@ -433,6 +435,7 @@ const ProductTable = () => {
           {newProducts.map((product, index) => (
             <tr key={index}>
               <td><input type="text" name="productName" value={product.productName} onChange={(e) => handleInputChange(e, index)} /></td>
+              <td><input type="text" name="gname" value={product.gname} onChange={(e) => handleInputChange(e, index)} /></td>
               <td><input type="text" name="productCompany" value={product.productCompany} onChange={(e) => handleInputChange(e, index)} /></td>
               <td><input type="number" name="productQuantity" value={product.productQuantity} onChange={(e) => handleInputChange(e, index)} /></td>
               <td><input type="number" name="purchasePrice" value={product.purchasePrice} onChange={(e) => handleInputChange(e, index)} /></td>
