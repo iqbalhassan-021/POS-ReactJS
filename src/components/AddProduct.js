@@ -152,33 +152,33 @@ const ProductTable = () => {
     try {
       const pendingCollection = collection(firestore, 'pendingPayments');
   
-      // Calculate the total bill from the cart
       const totalBill = cart.reduce(
-        (total, product) => total + parseFloat(product.purchasePrice) * parseInt(product.productQuantity),
+        (total, product) => total + parseFloat(product.purchasePrice) * parseInt(product.productQuantity, 10),
         0
       );
   
-      // Ensure that the totalBill is greater than 0
       if (totalBill <= 0) {
         alert("Invalid total bill amount.");
         return;
       }
   
       const newPendingPayment = {
-        companyName: "Premier Sale Ltd",  // Replace with dynamic value if needed
+        vendorName: vendorDetails.vendorName || "Default Vendor",
+        companyName: vendorDetails.companyName || "Default Company",
         totalBill,
         totalProducts: cart.length,
-        vendorName: "Zain",  // Replace with dynamic vendor name
-        items: cart,  // Store the cart items here
-        createdAt: new Date() // Track when the payment was added
+        items: cart.map((item) => ({
+          ...item,
+          vendorName: vendorDetails.vendorName,
+          companyName: vendorDetails.companyName,
+        })),
+        createdAt: new Date(),
       };
   
-      // Add the new pending payment to Firestore
       await addDoc(pendingCollection, newPendingPayment);
   
       alert('Purchase saved successfully!');
-      setCart([]); // Clear the cart after saving
-  
+      setCart([]);
     } catch (error) {
       console.error('Error saving purchase:', error);
       alert('Failed to save purchase.');
@@ -187,96 +187,64 @@ const ProductTable = () => {
   
   
   const handlePay = async (paymentMethod, pendingPaymentId) => {
-    if (!firestore) {
-      console.error("Firestore is not initialized.");
-      alert("Error: Firestore is not initialized.");
-      return;
-    }
+    try {
+      const pendingPaymentDocRef = doc(firestore, "pendingPayments", pendingPaymentId);
+      const pendingPaymentDoc = await getDoc(pendingPaymentDocRef);
   
-    console.log("Selected payment method:", paymentMethod);
+      if (!pendingPaymentDoc.exists()) {
+        alert("Pending payment not found.");
+        return;
+      }
   
-    // Ensure the pendingPaymentId is valid
-    if (!pendingPaymentId) {
-      console.error("Invalid pendingPaymentId.");
-      alert("Error: Invalid payment ID.");
-      return;
-    }
+      const { totalBill, items } = pendingPaymentDoc.data();
   
-    // Fetch the pending payment document using the pendingPaymentId
-    const pendingPaymentDocRef = doc(firestore, 'pendingPayments', pendingPaymentId);
-    const pendingPaymentDoc = await getDoc(pendingPaymentDocRef);
+      if (totalBill <= 0) {
+        alert("Invalid total bill amount.");
+        return;
+      }
   
-    if (!pendingPaymentDoc.exists()) {
-      console.error("Pending payment not found.");
-      alert("Pending payment not found.");
-      return;
-    }
+      const account = accounts.find((acc) => acc.name === paymentMethod);
+      const accountRef = doc(firestore, account.collectionName, account.name);
+      const accountDoc = await getDoc(accountRef);
   
-    // 1. Retrieve the totalBill from the pending payment document
-    const totalBill = pendingPaymentDoc.data().totalBill;
-    console.log("Total Bill from pending payment:", totalBill);
+      let newBalance;
+      if (!accountDoc.exists()) {
+        const initialBalance = await getAccountBalance(account.collectionName) || 0;
+        newBalance = initialBalance - totalBill;
+        await setDoc(accountRef, { amount: newBalance });
+      } else {
+        const existingAmount = accountDoc.data()?.amount || 0;
+        newBalance = existingAmount - totalBill;
+        await updateDoc(accountRef, { amount: newBalance });
+      }
   
-    // Ensure totalBill is valid
-    if (totalBill <= 0) {
-      alert("Invalid total bill amount.");
-      return;
-    }
-  
-    // 2. Check available balances from the accounts
-    let totalAvailableBalance = 0;
-    for (const account of accounts) {
-      const accountBalance = await getAccountBalance(account.collectionName);
-      totalAvailableBalance += accountBalance;
-      console.log(`Available balance in ${account.name}:`, accountBalance);
-    }
-  
-    // 3. If balance is available for paying the totalBill
-    if (totalAvailableBalance < totalBill) {
-      alert("Insufficient balance across all accounts.");
-      return;
-    }
-  
-    // Proceed with payment logic
-    const account = accounts.find((acc) => acc.name === paymentMethod);
-    const accountBalance = await getAccountBalance(account.collectionName);
-  
-    const accountRef = doc(firestore, account.collectionName, account.name);
-  
-    // Check if the document exists before updating
-    const accountDoc = await getDoc(accountRef);
-    if (!accountDoc.exists()) {
-      // If the document doesn't exist, create it with the remaining balance
-      await setDoc(accountRef, { remainingBalance: accountBalance - totalBill });
-      console.log(`Account document for ${account.name} created with new balance.`);
-    } else {
-      // If the document exists, update it
-      await updateDoc(accountRef, {
-        remainingBalance: accountBalance - totalBill,
+      const paymentsCollection = collection(firestore, "payments");
+      await addDoc(paymentsCollection, {
+        paymentMethod,
+        totalBill,
+        items,
+        paidAt: new Date(),
       });
-      console.log(`Payment deducted from account: ${account.name}`);
+  
+      const productsCollection = collection(firestore, "products");
+      for (const item of items) {
+        await addDoc(productsCollection, {
+          ...item,
+          vendorName: item.vendorName,
+          companyName: item.companyName,
+          createdAt: new Date(),
+        });
+      }
+  
+      await deleteDoc(pendingPaymentDocRef);
+  
+      alert("Payment successful and products added!");
+      setCart([]);
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Payment failed.');
     }
-  
-    // 4. Add items to the "products" collection
-    const productsCollection = collection(firestore, "products");
-    for (const item of pendingPaymentDoc.data().items) {
-      const newProduct = {
-        ...item,
-        createdAt: new Date(),
-      };
-      await addDoc(productsCollection, newProduct);
-    }
-  
-    // 5. Remove the corresponding pending payment from Firestore
-    await deleteDoc(pendingPaymentDocRef);
-    console.log("Pending payment deleted.");
-  
-    // 6. Replace the "Pay" button with "Paid" status (Handle this in your UI)
-    alert("Payment successful and products added!");
-  
-    // Clear the cart after successful payment (Optional, if needed)
-    setCart([]);
   };
-    
    
   // Function to get account balanceconst getAccountBalance = async (collectionName) => {
     const getAccountBalance = async (collectionName) => {
