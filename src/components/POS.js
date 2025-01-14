@@ -14,6 +14,7 @@ const POS = () => {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [customerName, setCustomerName] = useState('');
+  const [discount, setdiscount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [givenCash, setGivenCash] = useState(0);
   const [remainingBalance, setRemainingBalance] = useState(0);
@@ -49,10 +50,13 @@ const POS = () => {
     }
   };
   useEffect(() => {
-    // Recalculate the remaining balance whenever givenCash or total changes
-    const remaining = givenCash - total;
+    // Calculate the discounted total
+    const discountedTotal = total * (1 - discount / 100);
+    // Recalculate the remaining balance with the discounted total
+    const remaining = discountedTotal - givenCash;
     setRemainingBalance(remaining);
-  }, [givenCash, total]); // Add total and givenCash as dependencies
+  }, [givenCash, discount, total]); // Dependencies: givenCash, discount, and total
+  
   
   const handleAddToCart = () => {
     if (!selectedProduct || quantity <= 0) {
@@ -127,7 +131,7 @@ const POS = () => {
   
     // Filter products to exclude items already in the cart and products with productQuantity <= 10
     const availableProducts = products.filter(
-      (product) => !cart.some((item) => item.product.id === product.id) && product.productQuantity > 10
+      (product) => !cart.some((item) => item.product.id === product.id) && product.productQuantity > 0
     );
   
     // Find matching products based on the input value
@@ -146,7 +150,7 @@ const POS = () => {
   };
   const handlePayment = async () => {
     try {
-      const remaining = givenCash - total;
+      const remaining = givenCash - total - discount;
       setRemainingBalance(remaining);
   
       // Find the selected account (payment method)
@@ -334,59 +338,73 @@ const POS = () => {
 
       {/* Payment Modal */}
       {isModalVisible && (
-  <div className="modal">
-    <div className="modal-content">
-      <h3>BUTT PHARMACY</h3>
-      <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
-      <p><strong>Time:</strong> {new Date().toLocaleTimeString()}</p>
-      <h3>Total Bill: PKR {total.toFixed(2)}</h3>
-      <label>
-  Customer Name:
-  <input
-    type="text"
-    value={customerName} // Shows the current value of customerName
-    onChange={(e) => setCustomerName(e.target.value)} // Update state on change
-    placeholder='Walking Customer' // Placeholder when the input is empty
-  />
-</label>
+        <div className="modal">
+  <div className="modal-content">
+    <h3>BUTT PHARMACY</h3>
+    <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+    <p><strong>Time:</strong> {new Date().toLocaleTimeString()}</p>
+    <h3>Total Bill: PKR {(total * (1 - discount / 100)).toFixed(2)}</h3>
 
-      <label>
-        Payment Method:
-        <select
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value)}
-        >
-          <option value="Cash">Cash</option>
-          <option value="JazzCash">JazzCash</option>
-          <option value="EasyPesa">EasyPesa</option>
-          <option value="BankTransfer">BankTransfer</option>
-        </select>
-      </label>
-      <label>
-        Given Cash:
-        <input
-          type="number"
-          value={givenCash}
-          onChange={(e) => setGivenCash(parseFloat(e.target.value))}
-        />
-      </label>
-      <label>
-        Remaining Balance:
-        <input
-          type="number"
-          value={remainingBalance}
-          readOnly
-          style={{ color: remainingBalance < 0 ? 'red' : 'black' }}
-        />
-      </label>
 
-      <button onClick={handlePayment}>OK</button>
-      <button onClick={() => setIsModalVisible(false)} style={{ marginLeft: '1em' }}>
-        Cancel
-      </button>
-    </div>
+    <label>
+      Customer Name:
+      <input
+        type="text"
+        value={customerName} // Shows the current value of customerName
+        onChange={(e) => setCustomerName(e.target.value)} // Update state on change
+        placeholder='Walking Customer' // Placeholder when the input is empty
+      />
+    </label>
+
+    <label>
+      Payment Method:
+      <select
+        value={paymentMethod}
+        onChange={(e) => setPaymentMethod(e.target.value)}
+      >
+        <option value="Cash">Cash</option>
+        <option value="JazzCash">JazzCash</option>
+        <option value="EasyPesa">EasyPesa</option>
+        <option value="BankTransfer">BankTransfer</option>
+      </select>
+    </label>
+
+    <label>
+      Discount:
+      <input
+        type="number"
+        value={discount}
+        onChange={(e) => setdiscount(parseFloat(e.target.value))}
+        placeholder='Enter discount' // Placeholder when the input is empty
+      />
+    </label>
+
+    <label>
+      Given Cash:
+      <input
+        type="number"
+        value={givenCash}
+        onChange={(e) => setGivenCash(parseFloat(e.target.value))}
+      />
+    </label>
+
+    <label>
+      Remaining Balance:
+      <input
+        type="number"
+        value={remainingBalance}
+        readOnly
+        style={{ color: remainingBalance < 0 ? 'red' : 'black' }}
+      />
+    </label>
+
+    <button onClick={handlePayment}>OK</button>
+    <button onClick={() => setIsModalVisible(false)}  style={{ marginLeft: '1em' }}>Cancel</button>
   </div>
+</div>
+
 )}
+
 
     </section>
   );

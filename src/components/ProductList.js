@@ -6,12 +6,13 @@ const ProductList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedVendor, setExpandedVendor] = useState(null); // Track which vendor's products to show
+  const [searchTerm, setSearchTerm] = useState(''); // State for search input
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const querySnapshot = await getDocs(collection(firestore, 'products'));
-        const productsData = querySnapshot.docs.map(doc => ({
+        const productsData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
@@ -31,7 +32,7 @@ const ProductList = () => {
     if (confirmDelete) {
       try {
         await deleteDoc(doc(firestore, 'products', productId));
-        setProducts(prevProducts => prevProducts.filter(product => product.id !== productId));
+        setProducts((prevProducts) => prevProducts.filter((product) => product.id !== productId));
         alert('Product deleted successfully.');
       } catch (error) {
         console.error('Error deleting product:', error.message);
@@ -54,8 +55,13 @@ const ProductList = () => {
     setExpandedVendor(expandedVendor === vendorName ? null : vendorName); // Toggle visibility
   };
 
-  // Group products by vendor
-  const groupedByVendor = products.reduce((acc, product) => {
+  // Filter products based on the search term
+  const filteredProducts = products.filter((product) =>
+    product.productName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Group filtered products by vendor
+  const groupedByVendor = filteredProducts.reduce((acc, product) => {
     if (!acc[product.vendorName]) {
       acc[product.vendorName] = [];
     }
@@ -74,6 +80,24 @@ const ProductList = () => {
   return (
     <section className="section">
       <h2>All Products</h2>
+      
+      {/* Search Input */}
+      <input
+        type="text"
+        placeholder="Search products by name..."
+        value={searchTerm}
+   
+        onChange={(e) => setSearchTerm(e.target.value)}
+        style={{
+          marginBottom: '20px',
+          padding: '10px',
+          width: '100%',
+          boxSizing: 'border-box',
+          fontSize: '16px',
+          
+        }}
+      />
+
       <button onClick={handlePrint} className="primary-button" style={{ marginBottom: '20px' }}>
         Print Products
       </button>
@@ -89,7 +113,7 @@ const ProductList = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.keys(groupedByVendor).map(vendorName => (
+          {Object.keys(groupedByVendor).map((vendorName) => (
             <tr key={vendorName}>
               <td style={tableCellStyle}>{vendorName}</td>
               <td style={tableCellStyle}>{groupedByVendor[vendorName][0].companyName}</td>
@@ -109,7 +133,7 @@ const ProductList = () => {
       </table>
 
       {/* Display product details in table for the selected vendor */}
-      {Object.keys(groupedByVendor).map(vendorName => (
+      {Object.keys(groupedByVendor).map((vendorName) =>
         expandedVendor === vendorName && (
           <div key={vendorName} style={{ marginTop: '20px' }}>
             <h3>Products for {vendorName}</h3>
@@ -125,7 +149,7 @@ const ProductList = () => {
                 </tr>
               </thead>
               <tbody>
-                {groupedByVendor[vendorName].map(product => (
+                {groupedByVendor[vendorName].map((product) => (
                   <tr key={product.id}>
                     <td style={tableCellStyle}>{product.productName}</td>
                     <td style={tableCellStyle}>{product.purchasePrice}</td>
@@ -147,41 +171,7 @@ const ProductList = () => {
             </table>
           </div>
         )
-      ))}
-
-      {/* Hidden content for printing */}
-      <div id="print-area" style={{ display: 'none' }}>
-        <h1>BUTT PHARMACY</h1>
-        <p>{new Date().toLocaleString()}</p>
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-          <thead>
-            <tr>
-              <th style={tableHeaderStyle}>Product Name</th>
-              <th style={tableHeaderStyle}>Price (PKR)</th>
-              <th style={tableHeaderStyle}>Expiry Date</th>
-              <th style={tableHeaderStyle}>Company</th>
-              <th style={tableHeaderStyle}>Selling Price (PKR)</th>
-              <th style={tableHeaderStyle}>Tabs Per Pack</th>
-              <th style={tableHeaderStyle}>Vendor Name</th>
-              <th style={tableHeaderStyle}>Vendor Company</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(product => (
-              <tr key={product.id}>
-                <td style={tableCellStyle}>{product.productName}</td>
-                <td style={tableCellStyle}>{product.purchasePrice}</td>
-                <td style={tableCellStyle}>{product.productExpiry}</td>
-                <td style={tableCellStyle}>{product.productCompany}</td>
-                <td style={tableCellStyle}>{product.sellingPrice}</td>
-                <td style={tableCellStyle}>{product.tabsPerPack}</td>
-                <td style={tableCellStyle}>{product.vendorName || 'N/A'}</td>
-                <td style={tableCellStyle}>{product.companyName || 'N/A'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
     </section>
   );
 };

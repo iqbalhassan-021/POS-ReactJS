@@ -58,7 +58,7 @@ const Dashboard = () => {
         );
 
         // Identify low-stock products
-        const lowStock = products.filter((product) => product.productQuantity < 10);
+        const lowStock = products.filter((product) => product.productQuantity < 1);
 
         setExpiredProducts(expired);
         setExpiringProducts(expiringSoon);
@@ -194,7 +194,7 @@ const Dashboard = () => {
         </div>
 
         <div className="expiring-products">
-          <h3>Low Stock Products (Less than 10)</h3>
+          <h3>Low Stock Products (Less than 1)</h3>
           <ul>
             {lowStockProducts.length > 0 ? (
               lowStockProducts.map((product, index) => (

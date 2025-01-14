@@ -4,6 +4,8 @@ import { firestore } from '../firebase'; // Adjust the path to your firebase.js 
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -19,6 +21,7 @@ const ProductList = () => {
         }));
 
         setProducts(productData);
+        setFilteredProducts(productData);
       } catch (err) {
         setError('Error fetching products. Please try again.');
         console.error('Error fetching products:', err.message);
@@ -30,10 +33,26 @@ const ProductList = () => {
     fetchProducts();
   }, []);
 
+  const handleSearch = (event) => {
+    const term = event.target.value.toLowerCase();
+    setSearchTerm(term);
+
+    if (term === '') {
+      setFilteredProducts(products);
+    } else {
+      setFilteredProducts(
+        products.filter((product) =>
+          product.productName.toLowerCase().includes(term)
+        )
+      );
+    }
+  };
+
   const deleteProduct = async (productId) => {
     try {
       await deleteDoc(doc(firestore, 'products', productId));
       setProducts(products.filter((product) => product.id !== productId));
+      setFilteredProducts(filteredProducts.filter((product) => product.id !== productId));
     } catch (err) {
       console.error('Error deleting product:', err.message);
     }
@@ -52,6 +71,21 @@ const ProductList = () => {
   return (
     <section className="section">
       <h2>Stock</h2>
+
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={handleSearch}
+        placeholder="Search products by name"
+        style={{
+          width: '100%',
+          padding: '10px',
+          marginBottom: '20px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+        }}
+      />
+
       <button onClick={handlePrint} className="primary-button" style={{ marginBottom: '20px' }}>
         Print Stock
       </button>
@@ -59,7 +93,6 @@ const ProductList = () => {
       {loading && <p>Loading...</p>}
       {error && <p>{error}</p>}
 
-      {/* Displaying the product list in a table format */}
       <div className="product-table">
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
           <thead>
@@ -71,7 +104,7 @@ const ProductList = () => {
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <tr key={product.id}>
                 <td style={tableCellStyle}>{product.productName}</td>
                 <td style={tableCellStyle}>{product.productQuantity}</td>
@@ -93,7 +126,6 @@ const ProductList = () => {
         </table>
       </div>
 
-      {/* Hidden content for printing */}
       <div id="print-area" style={{ display: 'none' }}>
         <h1 style={{ textAlign: 'center' }}>Product List</h1>
         <p style={{ textAlign: 'center' }}>{new Date().toLocaleString()}</p>
@@ -106,7 +138,7 @@ const ProductList = () => {
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <tr key={product.id}>
                 <td style={tableCellStyle}>{product.productName}</td>
                 <td style={tableCellStyle}>{product.productQuantity}</td>
@@ -126,13 +158,11 @@ const tableHeaderStyle = {
   padding: '10px',
   backgroundColor: '#f4f4f4',
   fontWeight: 'bold',
-
 };
 
 const tableCellStyle = {
   border: '1px solid black',
   padding: '10px',
-
 };
 
 const deleteButtonStyle = {

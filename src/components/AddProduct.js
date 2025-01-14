@@ -12,6 +12,7 @@ const accounts = [
 ];
 
 const ProductTable = () => {
+
   const [vendorDetails, setVendorDetails] = useState({
     vendorName: '',
     companyName: '',
@@ -26,6 +27,7 @@ const ProductTable = () => {
     productExpiry: '',
     tabsPerPack: '',
     gname: '',
+    batch: '',
   }]);
 
   const [vendors, setVendors] = useState([]);
@@ -175,10 +177,16 @@ const ProductTable = () => {
         createdAt: new Date(),
       };
   
-      await addDoc(pendingCollection, newPendingPayment);
+      const docRef = await addDoc(pendingCollection, newPendingPayment);
+  
+      // Add the new payment to the local state
+      setPendingPayments((prev) => [
+        ...prev,
+        { id: docRef.id, ...newPendingPayment },
+      ]);
   
       alert('Purchase saved successfully!');
-      setCart([]);
+      setCart([]); // Clear the cart after saving
     } catch (error) {
       console.error('Error saving purchase:', error);
       alert('Failed to save purchase.');
@@ -239,6 +247,7 @@ const ProductTable = () => {
       await deleteDoc(pendingPaymentDocRef);
   
       alert("Payment successful and products added!");
+      setModalVisible(false); // Close the modal
       setCart([]);
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -391,6 +400,7 @@ const ProductTable = () => {
           <tr>
             <th>Product Name</th>
             <th>Generic Name</th>
+            <th>Batch Number</th>
             <th>Company</th>
             <th>Quantity</th>
             <th>Purchase Price</th>
@@ -404,6 +414,7 @@ const ProductTable = () => {
             <tr key={index}>
               <td><input type="text" name="productName" value={product.productName} onChange={(e) => handleInputChange(e, index)} /></td>
               <td><input type="text" name="gname" value={product.gname} onChange={(e) => handleInputChange(e, index)} /></td>
+              <td><input type="text" name="batch" value={product.batch} onChange={(e) => handleInputChange(e, index)} /></td>
               <td><input type="text" name="productCompany" value={product.productCompany} onChange={(e) => handleInputChange(e, index)} /></td>
               <td><input type="number" name="productQuantity" value={product.productQuantity} onChange={(e) => handleInputChange(e, index)} /></td>
               <td><input type="number" name="purchasePrice" value={product.purchasePrice} onChange={(e) => handleInputChange(e, index)} /></td>
